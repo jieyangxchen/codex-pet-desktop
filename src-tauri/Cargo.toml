@@ -1,0 +1,27 @@
+[package]
+name = "codex-pet-desktop"
+version = "0.1.0"
+description = "Standalone desktop pet app compatible with Codex custom pet spritesheets."
+authors = ["jieyangxchen"]
+license = "MIT"
+repository = "https://github.com/jieyangxchen/codex-pet-desktop"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "codex_pet_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "codex-pet-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.6.1", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.11.1", features = ["tray-icon", "image-png", "image-ico", "protocol-asset"] }
+tauri-plugin-opener = "2"
+url = "2"

@@ -17,3 +17,8 @@ pnpm-debug.log*
 
 coverage/
 .nyc_output/
+
+src-tauri/target/
+src-tauri/generated/
+src-tauri/gen/
+src-tauri/tauri.*.conf.json

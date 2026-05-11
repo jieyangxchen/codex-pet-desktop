@@ -1,6 +1,6 @@
 # Codex Pet Desktop
 
-一个独立运行的 Electron 桌面宠物应用，兼容 Codex 风格的自定义宠物图集。它不依赖 Codex 启动或运行，只是复用了 `pet.json` + `spritesheet.webp` 的宠物资源格式，方便把已有宠物直接放到桌面上。
+一个独立运行的 Tauri/Rust 桌面宠物应用，兼容 Codex 风格的自定义宠物图集。它不依赖 Codex 启动或运行，只是复用了 `pet.json` + `spritesheet.webp` 的宠物资源格式，方便把已有宠物直接放到桌面上。
 
 > 这是社区项目，不是 OpenAI 或 Codex 官方应用。
 
@@ -11,7 +11,7 @@
 - Windows 下默认不进任务栏，使用系统托盘图标控制显示、隐藏、重置位置、置顶和退出。
 - 支持拖动桌宠到屏幕边缘和角落，窗口只保留最小可见区域避免完全拖丢。
 - 支持单击招手、双击跳跃、自动游走、右键控制面板。
-- 内置两只猫咪宠物：全白猫 `米粉` 和深色长毛虎斑猫 `米酒`。
+- 内置资源包含两组可分发版本：猫咪版 `米粉 + 米酒`，以及 `Tigris` 惠比特版。
 - 可加载外部宠物目录，兼容 Codex 自定义宠物包。
 
 ## 交互
@@ -27,41 +27,39 @@
 
 控制面板支持切换宠物、切换动作状态、调整大小、开启/关闭自动游走、开启/关闭置顶、退出应用。
 
+## 下载
+
+推荐从 GitHub Releases 下载。每个版本会提供两个 Windows 安装包：
+
+- `codex-pet-desktop-cats-windows-x64.exe`：内置 `米粉` 和 `米酒`。
+- `codex-pet-desktop-tigris-windows-x64.exe`：内置 `Tigris` 惠比特。
+
 ## 安装与运行
 
-需要 Node.js 20 或更高版本。
+Rust/Tauri 是主实现。Electron 代码仍保留作历史参考和迁移对照。
 
 ```bash
-npm install
-npm run start
+cargo install tauri-cli --version "^2"
+cd src-tauri
+cargo run
 ```
 
 ## Windows 打包
 
-```bash
-npm run dist:win
-```
-
-打包产物会输出到 `dist/`：
-
-- `Codex Pet Desktop 0.1.0.exe`：便携版单文件，适合直接分发。
-- `win-unpacked/Codex Pet Desktop.exe`：解包后的应用主程序，依赖同目录资源，适合调试。
-
-也可以只生成解包目录：
+Windows 打包建议在 Windows 环境或 GitHub Actions 中执行：
 
 ```bash
-npm run pack:win
+node scripts/build-variant.js cats build
+node scripts/build-variant.js tigris build
 ```
+
+`docs/release-workflow.yml` 提供了 GitHub Actions 发布模板。把它复制到 `.github/workflows/release.yml` 后，推送 `v*` tag 会自动构建两个安装包并发布到 Releases。
+
+Electron 旧打包脚本仍可用，但不再是推荐路线。
 
 ## Mac 打包
 
-目前 Mac 端脚本只保留了基础目录包：
-
-```bash
-npm run pack:mac
-```
-
-Windows 是当前优先支持的平台，Mac 端仍需要进一步适配菜单栏、权限和打包细节。
+Tauri 支持 Mac 打包，但当前优先验证 Windows。Mac 透明窗口可能需要额外启用平台私有 API。
 
 ## 宠物资源格式
 
@@ -107,7 +105,7 @@ my-pet/
 应用会按顺序扫描这些位置：
 
 1. `CODEX_PETS_DIR` 环境变量指定的目录，多个目录按系统路径分隔符分开。
-2. 应用内置资源目录 `resources/pets`。
+2. 应用内置资源目录。
 3. 应用用户数据目录下的 `pets`。
 4. `~/.codex/pets`。
 
@@ -121,21 +119,21 @@ npm run smoke
 
 这个检查会验证内置宠物可被加载，并验证桌宠窗口拖动边界逻辑。
 
-也可以运行 Electron 启动冒烟检查：
+也可以运行 Tauri 启动冒烟检查：
 
 ```bash
-PET_DESKTOP_E2E=1 npm run start
+cd src-tauri
+PET_DESKTOP_E2E=1 cargo run
 ```
 
 ## 项目结构
 
 ```text
 resources/pets/        内置宠物资源
-src/main.js            Electron 主进程、窗口和托盘逻辑
-src/preload.js         渲染进程安全 IPC 桥
+src-tauri/             Rust/Tauri 主进程、窗口、托盘、打包配置
 src/renderer.*         桌宠界面、动画和交互逻辑
-src/pets.js            宠物目录扫描和资源解析
-src/windowBounds.js    桌宠拖动边界计算
+src/main.js            Electron 旧主进程，保留作迁移参考
+scripts/build-variant.js 生成猫咪版/Tigris 版 Tauri 打包配置
 src/smoke.js           本地冒烟检查
 ```
 

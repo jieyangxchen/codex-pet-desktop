@@ -22,6 +22,9 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "start:tauri": "cd src-tauri && cargo run",
+    "check:tauri": "cd src-tauri && cargo check",
+    "e2e:tauri": "cd src-tauri && PET_DESKTOP_E2E=1 cargo run",
     "smoke": "node src/smoke.js",
     "pack:win": "electron-builder --win dir --x64",
     "dist:win": "electron-builder --win portable --x64",

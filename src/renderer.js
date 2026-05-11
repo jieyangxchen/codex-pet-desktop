@@ -14,12 +14,28 @@ const STATES = {
 
 const petEl = document.querySelector("#pet");
 const panelEl = document.querySelector("#panel");
+const panelBackdropEl = document.querySelector("#panelBackdrop");
 const petSelect = document.querySelector("#petSelect");
 const stateSelect = document.querySelector("#stateSelect");
 const scaleRange = document.querySelector("#scaleRange");
 const wanderToggle = document.querySelector("#wanderToggle");
 const topToggle = document.querySelector("#topToggle");
 const quitButton = document.querySelector("#quitButton");
+
+const tauriInvoke = window.__TAURI__?.core?.invoke;
+const petDesktop =
+  window.petDesktop ||
+  (tauriInvoke
+    ? {
+        listPets: () => tauriInvoke("list_pets"),
+        moveBy: (x, y) => tauriInvoke("move_by", { x, y }),
+        setIgnoreMouseEvents: (ignored) => tauriInvoke("set_ignore_mouse_events", { ignored }),
+        resetPosition: () => tauriInvoke("reset_position"),
+        setAlwaysOnTop: (value) => tauriInvoke("set_always_on_top", { value }),
+        getWindowState: () => tauriInvoke("get_window_state"),
+        quit: () => tauriInvoke("quit")
+      }
+    : null);
 
 let pets = [];
 let activePet = null;
@@ -36,7 +52,7 @@ let wanderDirection = 0;
 let wanderUntil = 0;
 
 function isInteractiveTarget(target) {
-  return Boolean(target?.closest?.("#pet, #panel"));
+  return Boolean(target?.closest?.("#pet, #panel, #panelBackdrop"));
 }
 
 function updateMousePassthrough(event) {
@@ -45,7 +61,7 @@ function updateMousePassthrough(event) {
     return;
   }
   pointerInsideInteractiveArea = shouldReceiveMouse;
-  window.petDesktop.setIgnoreMouseEvents(!shouldReceiveMouse);
+  petDesktop?.setIgnoreMouseEvents(!shouldReceiveMouse);
 }
 
 function stopWander() {
@@ -148,7 +164,7 @@ function scheduleWander() {
 
 function wanderLoop(now) {
   if (wanderDirection !== 0 && now < wanderUntil && wanderToggle.checked && !dragging) {
-    window.petDesktop.moveBy(wanderDirection * 2, 0);
+    petDesktop?.moveBy(wanderDirection * 2, 0);
   }
   if (wanderUntil && now >= wanderUntil) {
     wanderDirection = 0;
@@ -159,9 +175,14 @@ function wanderLoop(now) {
   requestAnimationFrame(wanderLoop);
 }
 
-function togglePanel(show = panelEl.classList.contains("hidden")) {
+function setPanelVisible(show) {
   panelEl.classList.toggle("hidden", !show);
-  window.petDesktop.setIgnoreMouseEvents(false);
+  panelBackdropEl.classList.toggle("hidden", !show);
+  petDesktop?.setIgnoreMouseEvents(false);
+}
+
+function togglePanel(show = panelEl.classList.contains("hidden")) {
+  setPanelVisible(show);
 }
 
 petEl.addEventListener("pointerdown", (event) => {
@@ -173,7 +194,7 @@ petEl.addEventListener("pointerdown", (event) => {
   pointerInsideInteractiveArea = true;
   dragLastScreenX = event.screenX;
   dragLastScreenY = event.screenY;
-  window.petDesktop.setIgnoreMouseEvents(false);
+  petDesktop?.setIgnoreMouseEvents(false);
   petEl.setPointerCapture?.(event.pointerId);
 });
 
@@ -186,7 +207,7 @@ petEl.addEventListener("pointermove", (event) => {
   dragLastScreenX = event.screenX;
   dragLastScreenY = event.screenY;
   if (deltaX || deltaY) {
-    window.petDesktop.moveBy(deltaX, deltaY);
+    petDesktop?.moveBy(deltaX, deltaY);
   }
 });
 
@@ -220,22 +241,41 @@ petEl.addEventListener("dblclick", () => {
 
 document.addEventListener("contextmenu", (event) => {
   event.preventDefault();
+  if (panelEl.contains(event.target)) {
+    return;
+  }
   togglePanel();
+});
+
+panelBackdropEl.addEventListener("pointerdown", () => {
+  if (!dragging) {
+    setPanelVisible(false);
+    pointerInsideInteractiveArea = false;
+    petDesktop?.setIgnoreMouseEvents(true);
+  }
+});
+
+window.addEventListener("blur", () => {
+  if (!dragging) {
+    setPanelVisible(false);
+    pointerInsideInteractiveArea = false;
+    petDesktop?.setIgnoreMouseEvents(true);
+  }
 });
 
 document.addEventListener("mousemove", updateMousePassthrough);
 document.addEventListener("mouseleave", () => {
   if (!dragging && panelEl.classList.contains("hidden")) {
     pointerInsideInteractiveArea = false;
-    window.petDesktop.setIgnoreMouseEvents(true);
+    petDesktop?.setIgnoreMouseEvents(true);
   }
 });
 
-panelEl.addEventListener("pointerenter", () => window.petDesktop.setIgnoreMouseEvents(false));
+panelEl.addEventListener("pointerenter", () => petDesktop?.setIgnoreMouseEvents(false));
 panelEl.addEventListener("pointerleave", () => {
   if (!dragging) {
     pointerInsideInteractiveArea = false;
-    window.petDesktop.setIgnoreMouseEvents(true);
+    petDesktop?.setIgnoreMouseEvents(true);
   }
 });
 
@@ -245,21 +285,24 @@ scaleRange.addEventListener("input", () => {
   document.documentElement.style.setProperty("--scale", scaleRange.value);
 });
 topToggle.addEventListener("change", () => {
-  window.petDesktop.setAlwaysOnTop(topToggle.checked);
+  petDesktop?.setAlwaysOnTop(topToggle.checked);
 });
 quitButton.addEventListener("click", () => {
-  window.petDesktop.quit();
+  petDesktop?.quit();
 });
 
 async function init() {
+  if (!petDesktop) {
+    throw new Error("Desktop bridge is not available.");
+  }
   renderStateOptions();
-  const windowState = await window.petDesktop.getWindowState();
+  const windowState = await petDesktop.getWindowState();
   topToggle.checked = Boolean(windowState.alwaysOnTop);
-  const result = await window.petDesktop.listPets();
+  const result = await petDesktop.listPets();
   pets = result.pets;
   renderPetOptions();
   pickPet(pets[0]?.id);
-  window.petDesktop.setIgnoreMouseEvents(true);
+  petDesktop.setIgnoreMouseEvents(true);
   requestAnimationFrame(animationLoop);
   requestAnimationFrame(wanderLoop);
   scheduleWander();

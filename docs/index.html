@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex Pet Desktop Downloads</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: #17202a;
+        background: #f4f7fb;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 840px;
+        margin: 0 auto;
+        padding: 48px 20px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        letter-spacing: 0;
+      }
+      p {
+        color: #526171;
+        line-height: 1.7;
+      }
+      .downloads {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 28px;
+      }
+      .download {
+        padding: 20px;
+        border: 1px solid #dce3ec;
+        border-radius: 8px;
+        background: #ffffff;
+      }
+      .download h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        letter-spacing: 0;
+      }
+      .download a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        margin-top: 10px;
+        padding: 0 14px;
+        color: #ffffff;
+        background: #1f7a55;
+        border-radius: 6px;
+        text-decoration: none;
+      }
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #e8eef6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color: #eef3f8;
+          background: #12161c;
+        }
+        p {
+          color: #aeb9c6;
+        }
+        .download {
+          border-color: #2b3542;
+          background: #1a2028;
+        }
+        code {
+          background: #252d38;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Codex Pet Desktop</h1>
+      <p>
+        选择你想要的 Windows 版本。最新安装包托管在 GitHub Releases；这里的按钮会跳转到对应文件名。
+      </p>
+      <section class="downloads" aria-label="Downloads">
+        <article class="download">
+          <h2>猫咪版</h2>
+          <p>内置 <strong>米粉</strong> 和 <strong>米酒</strong>。适合想要两只猫咪桌宠的版本。</p>
+          <a href="https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/codex-pet-desktop-cats-windows-x64.exe">下载猫咪版</a>
+        </article>
+        <article class="download">
+          <h2>Tigris 版</h2>
+          <p>内置 <strong>Tigris Whippet</strong>。保留原来的虎斑惠比特资源。</p>
+          <a href="https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/codex-pet-desktop-tigris-windows-x64.exe">下载 Tigris 版</a>
+        </article>
+      </section>
+      <p>
+        如果按钮暂时不可用，请先在仓库推送 <code>v*</code> tag，GitHub Actions 会自动生成 Release
+        附件。
+      </p>
+    </main>
+  </body>
+</html>
