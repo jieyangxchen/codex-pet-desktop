@@ -269,8 +269,8 @@ document.addEventListener("contextmenu", (event) => {
   togglePanel();
 });
 
-panelBackdropEl.addEventListener("pointerdown", () => {
-  if (!dragging) {
+document.addEventListener("pointerdown", (event) => {
+  if (!dragging && !panelEl.classList.contains("hidden") && !isInteractiveTarget(event.target)) {
     setPanelVisible(false);
     pointerInsideInteractiveArea = false;
     setMousePassthrough(true);

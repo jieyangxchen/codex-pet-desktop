@@ -53,13 +53,14 @@ body {
   position: absolute;
   inset: 0;
   background: transparent;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .panel {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
   width: 232px;
   padding: 12px;
   color: var(--text);
