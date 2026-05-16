@@ -51,12 +51,7 @@ fn safe_pet_id(id: &str) -> Result<&str, String> {
 pub(crate) fn install_petpack_bytes(bytes: &[u8], pets_dir: &Path) -> Result<PathBuf, String> {
     let mut archive = ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
     let (petpack, spritesheet_path) = validate_petpack_archive(&mut archive)?;
-    let required_files = ["petpack.json", "pet.json", spritesheet_path.as_str()];
-    for file in required_files {
-        if archive.by_name(file).is_err() {
-            return Err(format!("Missing required petpack file: {file}"));
-        }
-    }
+    validate_required_files(&mut archive, &spritesheet_path)?;
 
     let destination = pets_dir.join(&petpack.id);
     let temp_destination = pets_dir.join(format!(".{}.installing", petpack.id));
@@ -87,7 +82,8 @@ pub(crate) fn install_petpack_bytes(bytes: &[u8], pets_dir: &Path) -> Result<Pat
 
 pub(crate) fn inspect_petpack_bytes(bytes: &[u8]) -> Result<PetpackSummary, String> {
     let mut archive = ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
-    let (petpack, _) = validate_petpack_archive(&mut archive)?;
+    let (petpack, spritesheet_path) = validate_petpack_archive(&mut archive)?;
+    validate_required_files(&mut archive, &spritesheet_path)?;
     Ok(PetpackSummary {
         id: petpack.id,
         display_name: petpack.display_name,
@@ -133,6 +129,32 @@ fn validate_petpack_archive(
         pet.spritesheet_path
             .unwrap_or_else(|| "spritesheet.webp".to_string()),
     ))
+}
+
+fn validate_required_files(
+    archive: &mut ZipArchive<Cursor<&[u8]>>,
+    spritesheet_path: &str,
+) -> Result<(), String> {
+    let required_files = ["petpack.json", "pet.json", spritesheet_path];
+    for file in required_files {
+        if archive.by_name(file).is_err() {
+            return Err(format!("Missing required petpack file: {file}"));
+        }
+    }
+
+    for index in 0..archive.len() {
+        let file = archive.by_index(index).map_err(|error| error.to_string())?;
+        if file.is_dir() {
+            continue;
+        }
+        let Some(path) = file.enclosed_name() else {
+            return Err(format!("Unsafe petpack path: {}", file.name()));
+        };
+        if path.components().count() != 1 {
+            return Err(format!("Petpack files must be at root: {}", file.name()));
+        }
+    }
+    Ok(())
 }
 
 fn read_json_entry<T: for<'de> Deserialize<'de>>(
@@ -314,5 +336,83 @@ mod tests {
                 version: "1.0.0".to_string(),
             }
         );
+    }
+
+    #[test]
+    fn inspect_rejects_missing_pet_json() {
+        let pack = petpack(&[
+            (
+                "petpack.json",
+                br#"{"format":"codex-petpack","formatVersion":1,"id":"mi-fen","displayName":"Mi Fen","version":"1.0.0"}"#,
+            ),
+            ("spritesheet.webp", b"webp"),
+        ]);
+
+        let error = inspect_petpack_bytes(&pack).expect_err("reject missing pet.json");
+
+        assert!(error.contains("pet.json"));
+    }
+
+    #[test]
+    fn inspect_rejects_missing_spritesheet() {
+        let pack = petpack(&[
+            (
+                "petpack.json",
+                br#"{"format":"codex-petpack","formatVersion":1,"id":"mi-fen","displayName":"Mi Fen","version":"1.0.0"}"#,
+            ),
+            (
+                "pet.json",
+                br#"{"id":"mi-fen","displayName":"Mi Fen","spritesheetPath":"spritesheet.webp"}"#,
+            ),
+        ]);
+
+        let error = inspect_petpack_bytes(&pack).expect_err("reject missing spritesheet");
+
+        assert!(error.contains("spritesheet.webp"));
+    }
+
+    #[test]
+    fn inspect_rejects_invalid_zip() {
+        let error = inspect_petpack_bytes(b"not a zip").expect_err("reject invalid zip");
+
+        assert!(!error.is_empty());
+    }
+
+    #[test]
+    fn inspect_rejects_id_mismatch() {
+        let pack = petpack(&[
+            (
+                "petpack.json",
+                br#"{"format":"codex-petpack","formatVersion":1,"id":"mi-fen","displayName":"Mi Fen","version":"1.0.0"}"#,
+            ),
+            (
+                "pet.json",
+                br#"{"id":"other","displayName":"Other","spritesheetPath":"spritesheet.webp"}"#,
+            ),
+            ("spritesheet.webp", b"webp"),
+        ]);
+
+        let error = inspect_petpack_bytes(&pack).expect_err("reject id mismatch");
+
+        assert!(error.contains("mismatch"));
+    }
+
+    #[test]
+    fn inspect_rejects_nested_spritesheet_path() {
+        let pack = petpack(&[
+            (
+                "petpack.json",
+                br#"{"format":"codex-petpack","formatVersion":1,"id":"mi-fen","displayName":"Mi Fen","version":"1.0.0"}"#,
+            ),
+            (
+                "pet.json",
+                br#"{"id":"mi-fen","displayName":"Mi Fen","spritesheetPath":"assets/spritesheet.webp"}"#,
+            ),
+            ("assets/spritesheet.webp", b"webp"),
+        ]);
+
+        let error = inspect_petpack_bytes(&pack).expect_err("reject nested spritesheet path");
+
+        assert!(error.contains("root"));
     }
 }

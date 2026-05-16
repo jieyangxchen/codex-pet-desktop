@@ -11,6 +11,8 @@ use crate::{
 };
 
 const DOWNLOADS_URL: &str = "https://jieyangxchen.github.io/codex-pet-desktop/";
+const PETPACK_INDEX_URL: &str =
+    "https://jieyangxchen.github.io/codex-pet-desktop/petpacks/petpacks.json";
 const LATEST_RELEASE_API: &str =
     "https://api.github.com/repos/jieyangxchen/codex-pet-desktop/releases/latest";
 
@@ -21,6 +23,7 @@ struct AppInfo {
     version: &'static str,
     downloads_url: &'static str,
     latest_release_api: &'static str,
+    petpack_index_url: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -40,6 +43,19 @@ struct ImportPetpackResult {
     pets: PetList,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InspectPetpackResult {
+    id: String,
+    display_name: String,
+    version: String,
+    existing_managed_version: String,
+    existing_visible_version: String,
+    existing_visible_source_kind: String,
+    will_replace_managed: bool,
+    version_relation: String,
+}
+
 #[tauri::command]
 fn list_pets(app: AppHandle<Wry>) -> PetList {
     pet_catalog::list_pet_packages(&app)
@@ -52,6 +68,7 @@ fn get_app_info() -> AppInfo {
         version: env!("CARGO_PKG_VERSION"),
         downloads_url: DOWNLOADS_URL,
         latest_release_api: LATEST_RELEASE_API,
+        petpack_index_url: PETPACK_INDEX_URL,
     }
 }
 
@@ -60,6 +77,99 @@ fn open_downloads(app: AppHandle<Wry>) -> Result<(), String> {
     app.opener()
         .open_url(DOWNLOADS_URL, None::<&str>)
         .map_err(|error| error.to_string())
+}
+
+fn clean_version(value: &str) -> Option<Vec<u64>> {
+    let core = value
+        .trim()
+        .trim_start_matches(&['v', 'V'][..])
+        .split(['+', '-'])
+        .next()
+        .unwrap_or_default();
+    if core.is_empty() {
+        return None;
+    }
+
+    let mut parts = Vec::new();
+    for part in core.split('.').take(3) {
+        if part.is_empty() || !part.chars().all(|character| character.is_ascii_digit()) {
+            return None;
+        }
+        parts.push(part.parse::<u64>().ok()?);
+    }
+    Some(
+        parts
+            .into_iter()
+            .chain(std::iter::repeat(0))
+            .take(3)
+            .collect(),
+    )
+}
+
+fn compare_versions(left: &str, right: &str) -> Option<std::cmp::Ordering> {
+    Some(clean_version(left)?.cmp(&clean_version(right)?))
+}
+
+fn version_relation(incoming: &str, existing: Option<&str>) -> String {
+    let Some(existing) = existing.filter(|value| !value.trim().is_empty()) else {
+        return "new".to_string();
+    };
+    match compare_versions(incoming, existing) {
+        Some(std::cmp::Ordering::Greater) => "upgrade",
+        Some(std::cmp::Ordering::Equal) => "same",
+        Some(std::cmp::Ordering::Less) => "downgrade",
+        None => "unknown",
+    }
+    .to_string()
+}
+
+fn inspect_petpack_summary(
+    app: &AppHandle<Wry>,
+    summary: petpack::PetpackSummary,
+) -> Result<InspectPetpackResult, String> {
+    let pets_dir = pet_catalog::user_pets_dir(app)?;
+    let managed_dir = pet_catalog::user_pet_dir(&pets_dir, &summary.id).ok();
+    let existing_managed_version = managed_dir
+        .as_deref()
+        .map(pet_catalog::pet_version)
+        .unwrap_or_default();
+
+    let visible = pet_catalog::list_pet_packages(app)
+        .pets
+        .into_iter()
+        .find(|pet| pet.id == summary.id);
+    let existing_visible_version = visible
+        .as_ref()
+        .map(|pet| pet.version.clone())
+        .unwrap_or_default();
+    let existing_visible_source_kind = visible
+        .as_ref()
+        .map(|pet| pet.source_kind.clone())
+        .unwrap_or_default();
+    let baseline_version = if existing_managed_version.trim().is_empty() {
+        existing_visible_version.as_str()
+    } else {
+        existing_managed_version.as_str()
+    };
+    let version_relation = version_relation(&summary.version, Some(baseline_version));
+
+    Ok(InspectPetpackResult {
+        id: summary.id,
+        display_name: summary.display_name,
+        version: summary.version.clone(),
+        existing_managed_version,
+        existing_visible_version,
+        existing_visible_source_kind,
+        will_replace_managed: managed_dir.is_some(),
+        version_relation,
+    })
+}
+
+#[tauri::command]
+fn inspect_petpack(app: AppHandle<Wry>, data: String) -> Result<InspectPetpackResult, String> {
+    let bytes = BASE64.decode(data).map_err(|error| error.to_string())?;
+    let summary = petpack::inspect_petpack_bytes(&bytes)?;
+    inspect_petpack_summary(&app, summary)
 }
 
 #[tauri::command]
@@ -165,6 +275,7 @@ pub(crate) fn handler() -> impl Fn(tauri::ipc::Invoke<Wry>) -> bool + Send + Syn
         list_pets,
         get_app_info,
         open_downloads,
+        inspect_petpack,
         import_petpack,
         uninstall_pet,
         reveal_pet,
@@ -175,4 +286,30 @@ pub(crate) fn handler() -> impl Fn(tauri::ipc::Invoke<Wry>) -> bool + Send + Syn
         get_window_state,
         quit
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{compare_versions, version_relation};
+
+    #[test]
+    fn compares_common_semver_versions() {
+        assert!(compare_versions("v1.2.3", "1.2.2").is_some_and(|ordering| ordering.is_gt()));
+        assert!(compare_versions("1.2.3", "1.2.3").is_some_and(|ordering| ordering.is_eq()));
+        assert!(compare_versions("1.2.3", "1.3.0").is_some_and(|ordering| ordering.is_lt()));
+        assert!(compare_versions("", "1.0.0").is_none());
+        assert!(compare_versions("dev", "1.0.0").is_none());
+        assert!(compare_versions("1.0.0", "dev").is_none());
+    }
+
+    #[test]
+    fn classifies_petpack_version_relation() {
+        assert_eq!(version_relation("1.0.0", None), "new");
+        assert_eq!(version_relation("1.0.1", Some("1.0.0")), "upgrade");
+        assert_eq!(version_relation("1.0.0", Some("1.0.0")), "same");
+        assert_eq!(version_relation("0.9.0", Some("1.0.0")), "downgrade");
+        assert_eq!(version_relation("", Some("1.0.0")), "unknown");
+        assert_eq!(version_relation("dev", Some("1.0.0")), "unknown");
+        assert_eq!(version_relation("1.0.0", Some("dev")), "unknown");
+    }
 }

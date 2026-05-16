@@ -52,6 +52,8 @@ jobs:
           cp release/petpacks/*.petpack site/petpacks/
           cp release/petpacks/petpacks.json site/petpacks/petpacks.json
           cp release/petpacks/qa.json site/petpacks/qa.json
+          cp release/petpacks/visual-qa.html site/petpacks/visual-qa.html
+          cp -R release/petpacks/previews site/petpacks/previews
 
       - uses: actions/configure-pages@v6
         with:

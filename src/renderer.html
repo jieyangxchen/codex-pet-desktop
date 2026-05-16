@@ -37,14 +37,22 @@
           <span>Always on top</span>
         </label>
         <section class="app-update" aria-label="App updates">
-          <div class="panel-heading">App updates</div>
+          <div class="panel-heading">Updates</div>
           <div class="app-update-actions">
-            <button id="checkUpdateButton" type="button">Check Updates</button>
+            <button id="checkUpdateButton" type="button">Check App</button>
+            <button id="checkPetpackUpdatesButton" type="button">Check Pets</button>
             <button id="openDownloadsButton" type="button">Open Downloads</button>
           </div>
           <p id="updateStatus" class="update-status" aria-live="polite"></p>
         </section>
         <button id="importButton" type="button">Import Petpack</button>
+        <section id="importPreview" class="import-preview hidden" aria-label="Import preview">
+          <p id="importPreviewText"></p>
+          <div class="import-preview-actions">
+            <button id="confirmImportButton" type="button">Confirm Import</button>
+            <button id="cancelImportButton" type="button">Cancel</button>
+          </div>
+        </section>
         <p id="petStatus" class="pet-status" aria-live="polite"></p>
         <section class="pet-manager" aria-label="Installed pets">
           <div class="panel-heading">Installed pets</div>
@@ -54,6 +62,6 @@
       </section>
       <input id="petpackInput" class="hidden" type="file" accept=".petpack,application/zip" />
     </main>
-    <script src="./renderer.js"></script>
+    <script type="module" src="./renderer/index.js"></script>
   </body>
 </html>

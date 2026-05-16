@@ -13,8 +13,9 @@
 - 支持单击招手、双击跳跃、自动游走、右键控制面板。
 - 主程序不内置宠物资源，宠物通过独立 `.petpack` 资源包导入。
 - 右键控制面板内置资源管理：查看已安装宠物版本和来源、打开资源目录、卸载已导入资源。
-- 右键控制面板支持检查 GitHub Release 更新，并可直接打开下载页。
-- 导入同 id `.petpack` 时会覆盖应用数据目录里的旧版本，并显示旧版本到新版本的变化。
+- 右键控制面板支持检查主程序更新、宠物资源包更新，并可直接打开下载页。
+- 导入 `.petpack` 前会先预览名称和版本；同 id 资源确认后覆盖应用数据目录里的旧版本。
+- GitHub Pages 下载页展示宠物首帧预览，并提供动作帧视觉 QA 页面。
 - 可加载外部宠物目录，兼容 Codex 自定义宠物包。
 
 ## 交互
@@ -28,7 +29,7 @@
 | 系统托盘左键 | 显示或隐藏桌宠 |
 | 系统托盘右键 | 打开菜单，支持显示、隐藏、重置、置顶、退出 |
 
-控制面板支持导入宠物包、切换宠物、切换动作状态、调整大小、开启/关闭自动游走、开启/关闭置顶、检查更新、打开下载页、资源目录打开、卸载已导入宠物和退出应用。
+控制面板支持导入宠物包、导入前确认、切换宠物、切换动作状态、调整大小、开启/关闭自动游走、开启/关闭置顶、检查主程序和宠物资源更新、打开下载页、资源目录打开、卸载已导入宠物和退出应用。
 
 ## 下载
 
@@ -43,7 +44,7 @@
 
 ## 安装与运行
 
-Rust/Tauri 是主实现。Electron 代码仍保留作历史参考和迁移对照。
+Rust/Tauri 是主实现。
 
 ```bash
 cargo install tauri-cli --version "^2"
@@ -63,8 +64,6 @@ node scripts/build-app.js build windows
 
 GitHub Actions 会在推送 `v*` tag 时自动构建主程序安装包并发布到 Releases。
 
-Electron 旧打包脚本仍可用，但不再是推荐路线。
-
 ## Mac 打包
 
 macOS 打包建议在 macOS 环境或 GitHub Actions 中执行：
@@ -79,7 +78,7 @@ node scripts/build-app.js build macos-arm64
 node scripts/build-petpacks.js
 ```
 
-生成文件位于 `release/petpacks/`。脚本会先校验每个资源包的 `pet.json`、`spritesheet.webp` 和图集尺寸，并输出 `release/petpacks/qa.json`。GitHub Pages workflow 会自动生成 `.petpack`、资源索引和下载页。
+生成文件位于 `release/petpacks/`。脚本会先校验每个资源包的 `pet.json`、`spritesheet.webp` 和图集尺寸，并输出 `release/petpacks/qa.json`。GitHub Pages workflow 会自动生成 `.petpack`、资源索引、首帧预览、动作帧视觉 QA 页面和下载页。
 
 单独运行资源 QA：
 
@@ -163,7 +162,7 @@ spritesheet.webp
 npm run smoke
 ```
 
-这个检查会验证宠物资源格式、空宠物状态、导入缓存刷新、资源管理器、应用更新入口、下载页生成和桌宠窗口拖动边界逻辑。
+这个检查会验证宠物资源格式、空宠物状态、导入预览确认、导入缓存刷新、资源管理器、主程序和宠物资源更新入口、下载页生成、视觉 QA 页面和 workflow 配置。
 
 也可以运行 Tauri 启动冒烟检查：
 
@@ -177,8 +176,9 @@ PET_DESKTOP_E2E=1 cargo run
 ```text
 resources/pets/        用于生成独立 .petpack 的宠物资源
 src-tauri/             Rust/Tauri 主进程、窗口、托盘、打包配置
-src/renderer.*         桌宠界面、动画和交互逻辑
-src/main.js            Electron 旧主进程，保留作迁移参考
+src/renderer/          桌宠界面模块、动画、导入和更新逻辑
+src/renderer.html      桌宠窗口 HTML
+src/renderer.css       桌宠窗口样式
 scripts/build-app.js   生成无内置资源的 Tauri 主程序安装包
 scripts/build-petpacks.js 生成独立宠物资源包
 scripts/qa-petpack-assets.js 校验宠物资源 manifest 和 spritesheet 尺寸

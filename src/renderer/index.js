@@ -1,16 +1,12 @@
-const CELL_WIDTH = 192;
-const CELL_HEIGHT = 208;
-const STATES = {
-  idle: { row: 0, frames: 6, fps: 5 },
-  "running-right": { row: 1, frames: 8, fps: 10 },
-  "running-left": { row: 2, frames: 8, fps: 10 },
-  waving: { row: 3, frames: 4, fps: 6, once: true },
-  jumping: { row: 4, frames: 5, fps: 8, once: true },
-  failed: { row: 5, frames: 8, fps: 6, once: true },
-  waiting: { row: 6, frames: 6, fps: 5 },
-  running: { row: 7, frames: 6, fps: 7 },
-  review: { row: 8, frames: 6, fps: 6 }
-};
+import { CELL_HEIGHT, CELL_WIDTH, STATES } from "./constants.js";
+import { createDesktopBridge, resolveSpritesheetSource } from "./bridge.js";
+import { cleanVersion, compareVersions, summarizePetpackUpdates } from "./version.js";
+import {
+  friendlyPetpackError,
+  importConfirmLabel,
+  importPreviewMessage,
+  readFileAsBase64
+} from "./petpack.js";
 
 const petEl = document.querySelector("#pet");
 const emptyStateEl = document.querySelector("#emptyState");
@@ -24,52 +20,19 @@ const topToggle = document.querySelector("#topToggle");
 const importButton = document.querySelector("#importButton");
 const importEmptyButton = document.querySelector("#importEmptyButton");
 const petpackInput = document.querySelector("#petpackInput");
+const importPreviewEl = document.querySelector("#importPreview");
+const importPreviewTextEl = document.querySelector("#importPreviewText");
+const confirmImportButton = document.querySelector("#confirmImportButton");
+const cancelImportButton = document.querySelector("#cancelImportButton");
 const petManagerEl = document.querySelector("#petManager");
 const petStatusEl = document.querySelector("#petStatus");
 const checkUpdateButton = document.querySelector("#checkUpdateButton");
+const checkPetpackUpdatesButton = document.querySelector("#checkPetpackUpdatesButton");
 const openDownloadsButton = document.querySelector("#openDownloadsButton");
 const updateStatusEl = document.querySelector("#updateStatus");
 const quitButton = document.querySelector("#quitButton");
 
-const tauriInvoke = window.__TAURI__?.core?.invoke;
-const tauriConvertFileSrc = window.__TAURI__?.core?.convertFileSrc;
-const petDesktop =
-  window.petDesktop ||
-  (tauriInvoke
-    ? {
-        listPets: () => tauriInvoke("list_pets"),
-        getAppInfo: () => tauriInvoke("get_app_info"),
-        openDownloads: () => tauriInvoke("open_downloads"),
-        importPetpack: (data) => tauriInvoke("import_petpack", { data }),
-        uninstallPet: (id) => tauriInvoke("uninstall_pet", { id }),
-        revealPet: (id) => tauriInvoke("reveal_pet", { id }),
-        moveBy: (x, y) => tauriInvoke("move_by", { x, y }),
-        setIgnoreMouseEvents: (ignored) => tauriInvoke("set_ignore_mouse_events", { ignored }),
-        resetPosition: () => tauriInvoke("reset_position"),
-        setAlwaysOnTop: (value) => tauriInvoke("set_always_on_top", { value }),
-        getWindowState: () => tauriInvoke("get_window_state"),
-        quit: () => tauriInvoke("quit")
-      }
-    : null);
-const isTauriRuntime = Boolean(tauriInvoke);
-
-function resolveSpritesheetSource(pet) {
-  if (!pet) {
-    return "";
-  }
-  const revision = pet.spritesheetRevision || pet.version || "";
-  const appendRevision = (source) => {
-    if (!source || !revision) {
-      return source;
-    }
-    const separator = source.includes("?") ? "&" : "?";
-    return `${source}${separator}spriteRevision=${encodeURIComponent(revision)}`;
-  };
-  if (typeof tauriConvertFileSrc === "function" && pet.spritesheetPath) {
-    return appendRevision(tauriConvertFileSrc(pet.spritesheetPath));
-  }
-  return appendRevision(pet.spritesheetUrl || "");
-}
+const { petDesktop, tauriConvertFileSrc } = createDesktopBridge();
 
 let pets = [];
 let activePet = null;
@@ -84,10 +47,12 @@ let dragLastScreenY = 0;
 let wanderTimer = 0;
 let wanderDirection = 0;
 let wanderUntil = 0;
+let pendingImport = null;
 let appInfo = {
   version: "0.0.0",
   downloadsUrl: "https://jieyangxchen.github.io/codex-pet-desktop/",
-  latestReleaseApi: "https://api.github.com/repos/jieyangxchen/codex-pet-desktop/releases/latest"
+  latestReleaseApi: "https://api.github.com/repos/jieyangxchen/codex-pet-desktop/releases/latest",
+  petpackIndexUrl: "https://jieyangxchen.github.io/codex-pet-desktop/petpacks/petpacks.json"
 };
 
 function hasActivePet() {
@@ -95,9 +60,6 @@ function hasActivePet() {
 }
 
 function setMousePassthrough(ignored) {
-  if (isTauriRuntime) {
-    return;
-  }
   petDesktop?.setIgnoreMouseEvents(ignored);
 }
 
@@ -170,7 +132,7 @@ function pickPet(id) {
   }
   petEl.classList.remove("empty");
   emptyStateEl.classList.add("hidden");
-  const source = resolveSpritesheetSource(activePet);
+  const source = resolveSpritesheetSource(activePet, tauriConvertFileSrc);
   petEl.style.backgroundImage = source ? `url("${source}")` : "";
   petEl.textContent = "";
   petEl.setAttribute("aria-label", activePet.displayName);
@@ -206,42 +168,13 @@ function setUpdateStatus(message) {
   }
 }
 
-function cleanVersion(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^v/i, "")
-    .split(/[+-]/)[0];
-}
-
-function versionParts(value) {
-  return cleanVersion(value)
-    .split(".")
-    .slice(0, 3)
-    .map((part) => {
-      const match = part.match(/^\d+/);
-      return match ? Number(match[0]) : 0;
-    });
-}
-
-function compareVersions(left, right) {
-  const leftParts = versionParts(left);
-  const rightParts = versionParts(right);
-  for (let index = 0; index < 3; index += 1) {
-    const difference = (leftParts[index] || 0) - (rightParts[index] || 0);
-    if (difference !== 0) {
-      return difference;
-    }
-  }
-  return 0;
-}
-
 async function checkForUpdates() {
   if (!appInfo.latestReleaseApi || typeof fetch !== "function") {
     setUpdateStatus("检查更新不可用。");
     return;
   }
   checkUpdateButton.disabled = true;
-  setUpdateStatus("正在检查更新...");
+  setUpdateStatus("正在检查主程序更新...");
   try {
     const response = await fetch(appInfo.latestReleaseApi, {
       headers: { Accept: "application/vnd.github+json" }
@@ -255,14 +188,37 @@ async function checkForUpdates() {
       throw new Error("latest release tag is missing");
     }
     if (compareVersions(latestTag, appInfo.version) > 0) {
-      setUpdateStatus(`发现新版本 ${latestTag}，点击 Open Downloads 下载。`);
+      setUpdateStatus(`发现主程序新版本 ${latestTag}，点击 Open Downloads 下载。`);
       return;
     }
-    setUpdateStatus(`当前已是最新版本 v${cleanVersion(appInfo.version)}。`);
+    setUpdateStatus(`主程序已是最新版本 v${cleanVersion(appInfo.version)}。`);
   } catch (error) {
-    setUpdateStatus(`检查更新失败：${error.message}`);
+    setUpdateStatus(`检查主程序更新失败：${error.message}`);
   } finally {
     checkUpdateButton.disabled = false;
+  }
+}
+
+async function checkPetpackUpdates() {
+  if (!appInfo.petpackIndexUrl || typeof fetch !== "function") {
+    setUpdateStatus("宠物资源更新检查不可用。");
+    return;
+  }
+  checkPetpackUpdatesButton.disabled = true;
+  setUpdateStatus("正在检查宠物资源更新...");
+  try {
+    const response = await fetch(appInfo.petpackIndexUrl, {
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const remotePetpacks = await response.json();
+    setUpdateStatus(summarizePetpackUpdates(pets, remotePetpacks).message);
+  } catch (error) {
+    setUpdateStatus(`检查宠物资源更新失败：${error.message}`);
+  } finally {
+    checkPetpackUpdatesButton.disabled = false;
   }
 }
 
@@ -388,7 +344,7 @@ function wanderLoop(now) {
 }
 
 function setPanelVisible(show) {
-  if (show && !pets.length) {
+  if (show && !pets.length && !pendingImport) {
     show = false;
   }
   panelEl.classList.toggle("hidden", !show);
@@ -398,6 +354,71 @@ function setPanelVisible(show) {
 
 function togglePanel(show = panelEl.classList.contains("hidden")) {
   setPanelVisible(show);
+}
+
+function clearImportPreview() {
+  pendingImport = null;
+  petpackInput.value = "";
+  importPreviewEl?.classList.add("hidden");
+  if (importPreviewTextEl) {
+    importPreviewTextEl.textContent = "";
+  }
+}
+
+function showImportPreview(data, preview) {
+  pendingImport = { data, preview };
+  if (importPreviewTextEl) {
+    importPreviewTextEl.textContent = importPreviewMessage(preview);
+  }
+  if (confirmImportButton) {
+    confirmImportButton.textContent = importConfirmLabel(preview);
+  }
+  importPreviewEl?.classList.remove("hidden");
+}
+
+async function prepareSelectedPetpack(file) {
+  if (!file) {
+    return;
+  }
+  const data = await readFileAsBase64(file);
+  const preview = await petDesktop.inspectPetpack(data);
+  showImportPreview(data, preview);
+  setPetStatus(importPreviewMessage(preview));
+  setPanelVisible(true);
+}
+
+async function confirmPendingImport() {
+  if (!pendingImport) {
+    return;
+  }
+  confirmImportButton.disabled = true;
+  try {
+    const result = await petDesktop.importPetpack(pendingImport.data);
+    refreshPetList(result.pets, result.importedPetId);
+    if (result.replaced) {
+      setPetStatus(
+        `已覆盖 ${result.displayName || result.importedPetId}: ${
+          result.previousVersion || "unknown"
+        } -> ${result.version || "unknown"}`
+      );
+    } else {
+      setPetStatus(`已导入 ${result.displayName || result.importedPetId} ${result.version || ""}`.trim());
+    }
+    clearImportPreview();
+    setPanelVisible(false);
+  } finally {
+    confirmImportButton.disabled = false;
+  }
+}
+
+async function uninstallPet(pet) {
+  if (!pet?.canUninstall) {
+    setPetStatus("Only imported app-data petpacks can be uninstalled here.");
+    return;
+  }
+  const result = await petDesktop.uninstallPet(pet.id);
+  setPetStatus(`已卸载 ${pet.displayName}`);
+  refreshPetList(result, activePet?.id === pet.id ? undefined : activePet?.id);
 }
 
 petEl.addEventListener("pointerdown", (event) => {
@@ -517,6 +538,10 @@ checkUpdateButton?.addEventListener("click", () => {
   checkForUpdates();
 });
 
+checkPetpackUpdatesButton?.addEventListener("click", () => {
+  checkPetpackUpdates();
+});
+
 openDownloadsButton?.addEventListener("click", () => {
   petDesktop
     ?.openDownloads?.()
@@ -525,59 +550,31 @@ openDownloadsButton?.addEventListener("click", () => {
 });
 
 function openPetpackPicker() {
-  petpackInput.value = "";
+  clearImportPreview();
   petpackInput.click();
-}
-
-async function readFileAsBase64(file) {
-  const buffer = await file.arrayBuffer();
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-  }
-  return btoa(binary);
-}
-
-async function importSelectedPetpack(file) {
-  if (!file) {
-    return;
-  }
-  const data = await readFileAsBase64(file);
-  const result = await petDesktop.importPetpack(data);
-  refreshPetList(result.pets, result.importedPetId);
-  if (result.replaced) {
-    setPetStatus(
-      `已覆盖 ${result.displayName || result.importedPetId}: ${result.previousVersion || "unknown"} -> ${
-        result.version || "unknown"
-      }`
-    );
-  } else {
-    setPetStatus(`已导入 ${result.displayName || result.importedPetId} ${result.version || ""}`.trim());
-  }
-  setPanelVisible(false);
-}
-
-async function uninstallPet(pet) {
-  if (!pet?.canUninstall) {
-    setPetStatus("Only imported app-data petpacks can be uninstalled here.");
-    return;
-  }
-  const result = await petDesktop.uninstallPet(pet.id);
-  setPetStatus(`已卸载 ${pet.displayName}`);
-  refreshPetList(result, activePet?.id === pet.id ? undefined : activePet?.id);
 }
 
 importButton.addEventListener("click", openPetpackPicker);
 importEmptyButton.addEventListener("click", openPetpackPicker);
+confirmImportButton?.addEventListener("click", () => {
+  confirmPendingImport().catch((error) => setPetStatus(friendlyPetpackError(error)));
+});
+cancelImportButton?.addEventListener("click", () => {
+  clearImportPreview();
+  if (!pets.length) {
+    setPanelVisible(false);
+  }
+  setPetStatus("已取消导入。");
+});
 petpackInput.addEventListener("change", () => {
-  importSelectedPetpack(petpackInput.files?.[0]).catch((error) => {
+  prepareSelectedPetpack(petpackInput.files?.[0]).catch((error) => {
+    const friendly = friendlyPetpackError(error);
     if (!pets.length) {
       emptyStateEl.classList.remove("hidden");
-      emptyStateEl.querySelector("span").textContent = error.message;
+      emptyStateEl.querySelector("span").textContent = friendly;
     }
-    setPetStatus(error.message);
+    setPetStatus(friendly);
+    clearImportPreview();
   });
 });
 quitButton.addEventListener("click", () => {
@@ -589,7 +586,7 @@ async function init() {
     throw new Error("Desktop bridge is not available.");
   }
   renderStateOptions();
-  appInfo = (await petDesktop.getAppInfo?.()) || appInfo;
+  appInfo = { ...appInfo, ...((await petDesktop.getAppInfo?.()) || {}) };
   setUpdateStatus(`当前版本 v${cleanVersion(appInfo.version)}`);
   const windowState = await petDesktop.getWindowState();
   topToggle.checked = Boolean(windowState.alwaysOnTop);

@@ -76,6 +76,17 @@ function parseWebpSize(buffer) {
   throw new Error("Missing WebP image chunk");
 }
 
+function isRootFileName(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value === path.basename(value) &&
+    !value.includes("/") &&
+    !value.includes("\\") &&
+    !value.includes("..")
+  );
+}
+
 function validatePetResources(petsRoot, options = {}) {
   const expectedWidth = options.expectedWidth || EXPECTED_ATLAS_WIDTH;
   const expectedHeight = options.expectedHeight || EXPECTED_ATLAS_HEIGHT;
@@ -110,17 +121,21 @@ function validatePetResources(petsRoot, options = {}) {
       petReport.version = manifest.version || "1.0.0";
       if (!petReport.id) {
         petReport.errors.push("pet.json id is required");
+      } else if (petReport.id !== entry.name) {
+        petReport.errors.push(`pet.json id must match directory name: expected ${entry.name}, got ${petReport.id}`);
       }
       if (!petReport.displayName) {
         petReport.errors.push("pet.json displayName is required");
       }
 
       const spritesheet = manifest.spritesheetPath || "spritesheet.webp";
-      const spritesheetPath = path.join(petDir, spritesheet);
       petReport.spritesheet = spritesheet;
-      if (!fs.existsSync(spritesheetPath)) {
+      if (!isRootFileName(spritesheet)) {
+        petReport.errors.push("spritesheetPath must be a root-level file name without /, \\, or ..");
+      } else if (!fs.existsSync(path.join(petDir, spritesheet))) {
         petReport.errors.push(`Missing spritesheet: ${spritesheet}`);
       } else {
+        const spritesheetPath = path.join(petDir, spritesheet);
         const size = parseWebpSize(fs.readFileSync(spritesheetPath));
         petReport.width = size.width;
         petReport.height = size.height;
@@ -179,6 +194,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  isRootFileName,
   parseWebpSize,
   validatePetResources,
   writeQaReport

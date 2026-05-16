@@ -14,52 +14,17 @@
   },
   "keywords": [
     "desktop-pet",
-    "electron",
     "codex-pet",
     "spritesheet",
     "windows"
   ],
-  "main": "src/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run start:tauri",
     "start:tauri": "cd src-tauri && cargo run",
     "check:tauri": "cd src-tauri && cargo check",
     "e2e:tauri": "cd src-tauri && PET_DESKTOP_E2E=1 cargo run",
-    "smoke": "node src/smoke.js && node src/renderer-empty-smoke.js && node src/renderer-import-cache-smoke.js && node src/renderer-manager-smoke.js && node src/renderer-update-smoke.js && node src/petpack-qa-smoke.js && node src/download-page-smoke.js && node src/workflow-runtime-smoke.js",
+    "smoke": "node src/smoke.js && node src/renderer-petpack-helpers-smoke.mjs && node src/renderer-empty-smoke.js && node src/renderer-import-cache-smoke.js && node src/renderer-manager-smoke.js && node src/renderer-update-smoke.js && node src/petpack-qa-smoke.js && npm run build:petpacks && node src/visual-qa-page-smoke.js && node src/download-page-smoke.js && node src/workflow-runtime-smoke.js",
     "build:app": "node scripts/build-app.js build",
-    "build:petpacks": "node scripts/build-petpacks.js",
-    "pack:win": "electron-builder --win dir --x64",
-    "dist:win": "electron-builder --win portable --x64",
-    "pack:mac": "electron-builder --mac dir"
-  },
-  "build": {
-    "appId": "com.local.codexpetdesktop",
-    "productName": "永生计划",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "resources/pets",
-        "to": "pets"
-      }
-    ],
-    "win": {
-      "icon": "src/assets/app-icon.ico",
-      "target": [
-        "portable"
-      ]
-    },
-    "mac": {
-      "category": "public.app-category.utilities"
-    }
-  },
-  "devDependencies": {
-    "electron": "^37.2.6",
-    "electron-builder": "^24.13.3"
+    "build:petpacks": "node scripts/build-petpacks.js"
   }
 }

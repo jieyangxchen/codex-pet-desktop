@@ -1,146 +1,60 @@
-const fs = require("node:fs");
-const path = require("node:path");
-const vm = require("node:vm");
-
-class FakeClassList {
-  constructor() {
-    this.values = new Set();
-  }
-
-  add(value) {
-    this.values.add(value);
-  }
-
-  remove(value) {
-    this.values.delete(value);
-  }
-
-  contains(value) {
-    return this.values.has(value);
-  }
-
-  toggle(value, force) {
-    if (force === undefined ? !this.values.has(value) : force) {
-      this.values.add(value);
-      return true;
-    }
-    this.values.delete(value);
-    return false;
-  }
-}
-
-function createFakeElement(selector) {
-  const listeners = new Map();
-  return {
-    selector,
-    style: {
-      setProperty(name, value) {
-        this[name] = value;
-      }
-    },
-    classList: new FakeClassList(),
-    checked: selector === "#wanderToggle" || selector === "#topToggle",
-    value: "",
-    textContent: "",
-    files: [],
-    addEventListener(type, handler) {
-      listeners.set(type, handler);
-    },
-    dispatch(type, event = {}) {
-      listeners.get(type)?.(event);
-    },
-    closest(targetSelector) {
-      return targetSelector
-        .split(",")
-        .map((part) => part.trim())
-        .includes(selector)
-        ? this
-        : null;
-    },
-    contains(target) {
-      return target === this;
-    },
-    replaceChildren(...children) {
-      this.children = children;
-    },
-    setAttribute(name, value) {
-      this[name] = value;
-    },
-    querySelector() {
-      return createFakeElement(`${selector} child`);
-    },
-    click() {},
-    setPointerCapture() {},
-    releasePointerCapture() {}
-  };
-}
+const { loadRenderer } = require("./renderer-smoke-harness");
 
 async function main() {
-  const elements = new Map(
-    [
-      "#pet",
-      "#emptyState",
-      "#panel",
-      "#panelBackdrop",
-      "#petSelect",
-      "#stateSelect",
-      "#scaleRange",
-      "#wanderToggle",
-      "#topToggle",
-      "#importButton",
-      "#importEmptyButton",
-      "#petpackInput",
-      "#quitButton"
-    ].map((selector) => [selector, createFakeElement(selector)])
-  );
-  elements.get("#panel").classList.add("hidden");
-
-  const timeouts = [];
   const moveCalls = [];
   const passthroughCalls = [];
-  const context = {
-    console,
-    performance: { now: () => 0 },
-    btoa: (value) => Buffer.from(value, "binary").toString("base64"),
-    requestAnimationFrame() {},
-    document: {
-      documentElement: createFakeElement("html"),
-      createElement: (tag) => createFakeElement(tag),
-      querySelector: (selector) => elements.get(selector),
-      addEventListener() {}
-    },
-    window: {
-      petDesktop: {
-        listPets: async () => ({ pets: [], errors: [] }),
-        importPetpack: async () => {
-          throw new Error("not used");
-        },
-        moveBy: (...args) => moveCalls.push(args),
-        setIgnoreMouseEvents: (ignored) => passthroughCalls.push(ignored),
-        resetPosition: async () => {},
-        setAlwaysOnTop: async () => {},
-        getWindowState: async () => ({ alwaysOnTop: true }),
-        quit: () => {}
-      },
-      clearTimeout() {},
-      setTimeout(callback) {
-        timeouts.push(callback);
-        return timeouts.length;
-      },
-      addEventListener() {},
-      __TAURI__: undefined
-    }
+  let inspectCalls = 0;
+  let importCalls = 0;
+  const importedPet = {
+    id: "mi-fen",
+    displayName: "米粉",
+    version: "1.0.2",
+    sourceKind: "managed",
+    canUninstall: true,
+    spritesheetPath: "/pets/mi-fen/spritesheet.webp"
   };
-  context.window.window = context.window;
-  context.window.document = context.document;
-  context.window.requestAnimationFrame = context.requestAnimationFrame;
-
-  const source = fs.readFileSync(path.join(__dirname, "renderer.js"), "utf8");
-  vm.createContext(context);
-  vm.runInContext(source, context, { filename: "renderer.js" });
-  await Promise.resolve();
-  await Promise.resolve();
-  await new Promise((resolve) => setImmediate(resolve));
+  const { elements, timeouts, flush } = await loadRenderer({
+    tauri: {
+      core: {
+        invoke: async () => {
+          throw new Error("not used");
+        }
+      }
+    },
+    petDesktop: {
+      listPets: async () => ({ pets: [], errors: [] }),
+      inspectPetpack: async () => {
+        inspectCalls += 1;
+        return {
+          id: "mi-fen",
+          displayName: "米粉",
+          version: "1.0.2",
+          existingManagedVersion: "",
+          existingVisibleVersion: "",
+          existingVisibleSourceKind: "",
+          willReplaceManaged: false,
+          versionRelation: "new"
+        };
+      },
+      importPetpack: async () => {
+        importCalls += 1;
+        return {
+          importedPetId: "mi-fen",
+          displayName: "米粉",
+          version: "1.0.2",
+          replaced: false,
+          previousVersion: "",
+          pets: { pets: [importedPet], errors: [] }
+        };
+      },
+      moveBy: (...args) => moveCalls.push(args),
+      setIgnoreMouseEvents: (ignored) => passthroughCalls.push(ignored),
+      resetPosition: async () => {},
+      setAlwaysOnTop: async () => {},
+      getWindowState: async () => ({ alwaysOnTop: true }),
+      quit: () => {}
+    }
+  });
 
   if (timeouts.length !== 0) {
     console.error(JSON.stringify({ ok: false, reason: "empty state scheduled wander", timeouts: timeouts.length }));
@@ -152,7 +66,47 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(JSON.stringify({ ok: true, passthroughCalls }, null, 2));
+  const petpackInput = elements.get("#petpackInput");
+  petpackInput.files = [{ arrayBuffer: async () => new ArrayBuffer(0) }];
+  petpackInput.dispatch("change");
+  await flush();
+
+  if (elements.get("#panel").classList.contains("hidden") || elements.get("#importPreview").classList.contains("hidden")) {
+    console.error(JSON.stringify({ ok: false, reason: "empty first import preview is hidden" }));
+    process.exit(1);
+  }
+
+  elements.get("#cancelImportButton").click();
+  await flush();
+
+  if (!elements.get("#panel").classList.contains("hidden") || !elements.get("#importPreview").classList.contains("hidden") || importCalls !== 0) {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        reason: "empty first import cancel did not hide panel without importing",
+        panelHidden: elements.get("#panel").classList.contains("hidden"),
+        previewHidden: elements.get("#importPreview").classList.contains("hidden"),
+        importCalls
+      })
+    );
+    process.exit(1);
+  }
+
+  petpackInput.files = [{ arrayBuffer: async () => new ArrayBuffer(0) }];
+  petpackInput.dispatch("change");
+  await flush();
+
+  elements.get("#confirmImportButton").click();
+  await flush();
+
+  if (inspectCalls !== 2 || importCalls !== 1 || !elements.get("#petStatus").textContent.includes("已导入")) {
+    console.error(
+      JSON.stringify({ ok: false, reason: "empty first import did not complete", inspectCalls, importCalls, status: elements.get("#petStatus").textContent })
+    );
+    process.exit(1);
+  }
+
+  console.log(JSON.stringify({ ok: true, passthroughCalls, inspectCalls, importCalls }, null, 2));
 }
 
 main().catch((error) => {

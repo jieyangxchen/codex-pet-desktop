@@ -6,21 +6,27 @@ const html = renderDownloadPage([
     displayName: "米粉",
     description: "全白猫咪",
     version: "1.0.2",
-    fileName: "mi-fen-1.0.2.petpack"
+    fileName: "mi-fen-1.0.2.petpack",
+    previewAtlas: "previews/mi-fen-1.0.2-atlas.webp"
   },
   {
     id: "tigris-whippet",
     displayName: "红糖",
     description: "虎斑色惠比特",
     version: "1.0.1",
-    fileName: "tigris-whippet-1.0.1.petpack"
+    fileName: "tigris-whippet-1.0.1.petpack",
+    previewAtlas: "previews/tigris-whippet-1.0.1-atlas.webp"
   }
 ]);
 
 const required = [
   "宠物·永生计划",
+  "把熟悉的宠物留在桌面上",
   "yongsheng-plan-windows-x64.exe",
   "mi-fen-1.0.2.petpack",
+  "./petpacks/previews/mi-fen-1.0.2-atlas.webp",
+  "./petpacks/visual-qa.html#mi-fen",
+  "idle 首帧预览",
   "tigris-whippet-1.0.1.petpack",
   "v1.0.2"
 ];

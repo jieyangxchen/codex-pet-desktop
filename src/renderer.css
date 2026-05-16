@@ -186,6 +186,34 @@ button:hover {
   color: var(--muted);
 }
 
+.import-preview {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid rgba(87, 210, 155, 0.34);
+  border-radius: 6px;
+  background: rgba(87, 210, 155, 0.09);
+}
+
+.import-preview p {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.import-preview-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.import-preview-actions button {
+  min-height: 26px;
+  margin-top: 0;
+  font-size: 11px;
+}
+
 .panel-heading {
   margin: 12px 0 6px;
   color: var(--text);
