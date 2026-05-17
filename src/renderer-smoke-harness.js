@@ -105,9 +105,10 @@ function findByText(element, text) {
 }
 
 async function flush() {
-  await Promise.resolve();
-  await Promise.resolve();
-  await new Promise((resolve) => setImmediate(resolve));
+  for (let index = 0; index < 6; index += 1) {
+    await Promise.resolve();
+    await new Promise((resolve) => setImmediate(resolve));
+  }
 }
 
 async function loadRenderer(options = {}) {

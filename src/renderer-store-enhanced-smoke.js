@@ -155,6 +155,7 @@ async function main() {
   elements.get("#storeFilter").dispatch("change");
   elements.get("#updateAllPetpacksButton").click();
   await flush();
+  await flush();
   if (!findByText(elements.get("#petStoreStatus"), "已更新") || importCalls.length !== 1 || !fetchCalls.some((url) => url.endsWith("mi-fen-1.0.3.petpack"))) {
     console.error(JSON.stringify({ ok: false, reason: "update all did not update eligible petpacks", importCalls, fetchCalls, status: elements.get("#petStoreStatus").textContent }, null, 2));
     process.exit(1);

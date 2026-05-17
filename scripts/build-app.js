@@ -42,7 +42,7 @@ const buildTarget = buildTargetForPlatform(platform);
 const config = {
   $schema: "https://schema.tauri.app/config/2",
   productName: "永生计划",
-  version: "0.2.5",
+  version: "0.2.6",
   identifier: "io.github.jieyangxchen.yongshengplan",
   build: {
     frontendDist: "../src/app",
