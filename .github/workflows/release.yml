@@ -114,17 +114,11 @@ jobs:
 
   build-macos:
     needs: quality-gate
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x64
-            runner: macos-15-intel
-            target: x86_64-apple-darwin
-          - arch: arm64
-            runner: macos-latest
-            target: aarch64-apple-darwin
+    runs-on: macos-latest
+
+    env:
+      MACOS_ARCH: arm64
+      MACOS_TARGET: aarch64-apple-darwin
 
     steps:
       - uses: actions/checkout@v6
@@ -135,7 +129,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ env.MACOS_TARGET }}
 
       - name: Cache Cargo registry and git
         uses: actions/cache@v5
@@ -144,10 +138,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/cargo-tauri
-            src-tauri/target/${{ matrix.target }}
-          key: cargo-macos-app-${{ matrix.arch }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+            src-tauri/target/${{ env.MACOS_TARGET }}
+          key: cargo-macos-app-${{ env.MACOS_ARCH }}-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: |
-            cargo-macos-app-${{ matrix.arch }}-
+            cargo-macos-app-${{ env.MACOS_ARCH }}-
             cargo-macos-
 
       - name: Install Tauri CLI
@@ -159,16 +153,16 @@ jobs:
           fi
 
       - name: Build app
-        run: node scripts/build-app.js build macos-${{ matrix.arch }}
+        run: node scripts/build-app.js build macos-${{ env.MACOS_ARCH }}
 
       - name: Rename installer
         run: |
           mkdir -p release-assets
-          cp src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg "release-assets/yongsheng-plan-macos-${{ matrix.arch }}.dmg"
+          cp src-tauri/target/${{ env.MACOS_TARGET }}/release/bundle/dmg/*.dmg "release-assets/yongsheng-plan-macos-${{ env.MACOS_ARCH }}.dmg"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: yongsheng-plan-macos-${{ matrix.arch }}
+          name: yongsheng-plan-macos-${{ env.MACOS_ARCH }}
           path: release-assets/*.dmg
 
   publish:
@@ -192,4 +186,3 @@ jobs:
 
             - `yongsheng-plan-windows-x64.exe`: Windows x64 主程序
             - `yongsheng-plan-macos-arm64.dmg`: Apple Silicon Mac 主程序
-            - `yongsheng-plan-macos-x64.dmg`: Intel Mac 主程序

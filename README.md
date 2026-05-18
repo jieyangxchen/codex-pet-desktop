@@ -38,7 +38,6 @@
 | --- | --- | --- |
 | Windows 主程序 | [yongsheng-plan-windows-x64.exe](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/yongsheng-plan-windows-x64.exe) | Windows x64 安装包 |
 | macOS Apple Silicon | [yongsheng-plan-macos-arm64.dmg](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/yongsheng-plan-macos-arm64.dmg) | M 系列芯片 Mac |
-| macOS Intel | [yongsheng-plan-macos-x64.dmg](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/yongsheng-plan-macos-x64.dmg) | Intel 芯片 Mac |
 | 最新 Release | [GitHub Releases](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest) | 主程序发布页 |
 | 宠物包索引 | [petpacks.json](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/petpacks.json) | 应用内资源库读取的索引 |
 | 资源视觉检查 | [visual-qa.html](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/visual-qa.html) | 查看每个宠物包的动作帧 |
@@ -150,7 +149,6 @@ cargo run
 ```bash
 node scripts/build-app.js build windows
 node scripts/build-app.js build macos-arm64
-node scripts/build-app.js build macos-x64
 ```
 
 生成宠物包和下载页：
@@ -189,7 +187,6 @@ GitHub Actions 会构建并发布：
 
 - `yongsheng-plan-windows-x64.exe`
 - `yongsheng-plan-macos-arm64.dmg`
-- `yongsheng-plan-macos-x64.dmg`
 
 宠物包发布：
 
