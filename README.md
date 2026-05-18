@@ -199,8 +199,8 @@ docs/index.html                 GitHub Pages 静态下载页
 主程序发布：
 
 ```bash
-git tag v0.2.9
-git push origin v0.2.9
+git tag v0.2.10
+git push origin v0.2.10
 ```
 
 GitHub Actions 会构建并发布：

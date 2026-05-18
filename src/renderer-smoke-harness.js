@@ -30,6 +30,7 @@ class FakeClassList {
 
 function createFakeElement(selector) {
   const listeners = new Map();
+  const attributes = new Map();
   return {
     selector,
     id: selector.startsWith("#") ? selector.slice(1) : "",
@@ -72,7 +73,15 @@ function createFakeElement(selector) {
       this.children = children;
     },
     setAttribute(name, value) {
+      attributes.set(name, String(value));
       this[name] = value;
+    },
+    getAttribute(name) {
+      return attributes.get(name) || null;
+    },
+    removeAttribute(name) {
+      attributes.delete(name);
+      delete this[name];
     },
     querySelector(childSelector) {
       const child = createFakeElement(`${selector} ${childSelector}`);
@@ -152,6 +161,7 @@ async function loadRenderer(options = {}) {
     "#updateAllPetpacksButton",
     "#refreshStoreButton",
     "#petStoreStatus",
+    "#petStoreProgress",
     "#petStoreList",
     "#quitButton"
   ];
@@ -161,6 +171,7 @@ async function loadRenderer(options = {}) {
   elements.get("#tabManager").dataset.panelTab = "managerSection";
   elements.get("#tabUpdate").dataset.panelTab = "updateSection";
   elements.get("#panel").classList.add("hidden");
+  elements.get("#petStoreProgress").classList.add("hidden");
   elements.get("#importPreview").classList.add("hidden");
   elements.get("#tabControl").classList.add("active");
   elements.get("#storeSection").classList.add("hidden");
@@ -168,6 +179,7 @@ async function loadRenderer(options = {}) {
   elements.get("#updateSection").classList.add("hidden");
 
   const timeouts = [];
+  const windowListeners = new Map();
   const windowObject = {
     petDesktop: options.petDesktop,
     clearTimeout() {},
@@ -176,7 +188,14 @@ async function loadRenderer(options = {}) {
       timeouts.push(callback);
       return timeouts.length;
     },
-    addEventListener() {},
+    addEventListener(type, handler) {
+      windowListeners.set(type, [...(windowListeners.get(type) || []), handler]);
+    },
+    dispatch(type, event = {}) {
+      for (const handler of windowListeners.get(type) || []) {
+        handler({ target: windowObject, ...event });
+      }
+    },
     __TAURI__: options.tauri
   };
   if (typeof options.random === "function") {
@@ -184,11 +203,19 @@ async function loadRenderer(options = {}) {
     windowObject.Math.random = options.random;
     globalThis.Math = windowObject.Math;
   }
+  const documentListeners = new Map();
   const documentObject = {
     documentElement: createFakeElement("html"),
     createElement: (tag) => createFakeElement(tag),
     querySelector: (selector) => elements.get(selector),
-    addEventListener() {}
+    addEventListener(type, handler) {
+      documentListeners.set(type, [...(documentListeners.get(type) || []), handler]);
+    },
+    dispatch(type, event = {}) {
+      for (const handler of documentListeners.get(type) || []) {
+        handler({ target: documentObject, ...event });
+      }
+    }
   };
   const fetch = options.fetch;
   const animationFrames = [];
@@ -216,7 +243,7 @@ async function loadRenderer(options = {}) {
   await import(`${entry}?smoke=${process.pid}-${Date.now()}-${Math.random()}`);
   await flush();
 
-  return { animationFrames, elements, timeouts, flush };
+  return { animationFrames, documentObject, elements, timeouts, windowObject, flush };
 }
 
 module.exports = {

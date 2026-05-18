@@ -94,6 +94,7 @@ export function createImportFlow({
       prepareSelectedPetpack(dom.petpackInput.files?.[0]).catch((error) => {
         const friendly = friendlyPetpackError(error);
         if (!state.pets.length) {
+          setPanelVisible(false);
           dom.emptyStateEl.classList.remove("hidden");
           dom.emptyStateEl.querySelector("span").textContent = friendly;
         }

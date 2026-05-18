@@ -34,8 +34,9 @@ export function createPetManager({
       dom.petEl.setAttribute("aria-label", "未安装宠物");
       dom.petEl.textContent = "";
       dom.petEl.classList.add("empty");
-      dom.emptyStateEl.classList.remove("hidden");
-      syncWindowLayout({ centerIfEmpty: true }).catch?.(() => {});
+      const panelVisible = !dom.panelEl.classList.contains("hidden");
+      dom.emptyStateEl.classList.toggle("hidden", panelVisible);
+      syncWindowLayout({ centerIfEmpty: !panelVisible }).catch?.(() => {});
       return;
     }
     dom.petEl.classList.remove("empty");

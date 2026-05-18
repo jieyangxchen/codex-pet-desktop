@@ -70,6 +70,7 @@
           <button id="refreshStoreButton" type="button">刷新资源库</button>
           <button id="updateAllPetpacksButton" type="button">更新全部宠物包</button>
           <p id="petStoreStatus" class="store-status" aria-live="polite"></p>
+          <progress id="petStoreProgress" class="store-progress hidden" max="1" value="0" aria-label="安装进度"></progress>
           <div id="petStoreList" class="pet-store-list"></div>
         </section>
         <section id="managerSection" class="panel-section hidden pet-manager" aria-label="已安装宠物">
@@ -87,7 +88,7 @@
           <p id="updateStatus" class="update-status" aria-live="polite"></p>
         </section>
       </section>
-      <input id="petpackInput" class="hidden" type="file" accept=".petpack,application/zip" />
+      <input id="petpackInput" class="petpack-input" type="file" accept=".petpack,application/zip" aria-label="选择宠物包" />
     </main>
     <script type="module" src="./renderer/index.js"></script>
   </body>

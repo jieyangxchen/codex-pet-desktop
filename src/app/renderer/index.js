@@ -23,6 +23,7 @@ const state = {
   },
   appInfo: {
     version: "0.0.0",
+    platform: "",
     downloadsUrl: "https://jieyangxchen.github.io/codex-pet-desktop/",
     latestReleaseApi: "https://api.github.com/repos/jieyangxchen/codex-pet-desktop/releases/latest",
     petpackIndexUrl: "https://jieyangxchen.github.io/codex-pet-desktop/petpacks/petpacks.json"

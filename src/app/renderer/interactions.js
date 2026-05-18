@@ -13,6 +13,7 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
   let lastQuietState = "";
   let edgePaused = false;
   let preferredNextDirection = 0;
+  let mousePassthrough = null;
   const defaultNaturalBehavior = {
     nextWanderDelayMs: [3500, 8000],
     idleDurationMs: [1600, 3200],
@@ -100,8 +101,18 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
     return nextState;
   }
 
+  function isWindowsRuntime() {
+    const platform = state.appInfo.platform || globalThis.navigator?.platform || "";
+    return /win/i.test(platform);
+  }
+
   function setMousePassthrough(ignored) {
-    petDesktop?.setIgnoreMouseEvents(ignored);
+    const nextIgnored = isWindowsRuntime() ? false : Boolean(ignored);
+    if (mousePassthrough === nextIgnored) {
+      return;
+    }
+    mousePassthrough = nextIgnored;
+    petDesktop?.setIgnoreMouseEvents(nextIgnored);
   }
 
   function isInteractiveTarget(target) {
@@ -206,8 +217,9 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
   function setPanelVisible(show) {
     dom.panelEl.classList.toggle("hidden", !show);
     dom.panelBackdropEl.classList.toggle("hidden", !show);
+    dom.emptyStateEl.classList.toggle("hidden", show || hasActivePet());
     setMousePassthrough(false);
-    onLayoutChange().catch?.(() => {});
+    onLayoutChange({ centerIfEmpty: !show && !hasActivePet() }).catch?.(() => {});
   }
 
   function togglePanel(show = dom.panelEl.classList.contains("hidden")) {
@@ -298,21 +310,20 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
       if (!dragging && !dom.panelEl.classList.contains("hidden") && !isInteractiveTarget(event.target)) {
         setPanelVisible(false);
         pointerInsideInteractiveArea = false;
-        setMousePassthrough(true);
+        setMousePassthrough(hasActivePet());
       }
     });
     window.addEventListener("blur", () => {
       if (!dragging) {
-        setPanelVisible(false);
         pointerInsideInteractiveArea = false;
-        setMousePassthrough(true);
+        setMousePassthrough(false);
       }
     });
     document.addEventListener("mousemove", updateMousePassthrough);
     document.addEventListener("mouseleave", () => {
       if (!dragging && dom.panelEl.classList.contains("hidden")) {
         pointerInsideInteractiveArea = false;
-        setMousePassthrough(true);
+        setMousePassthrough(hasActivePet());
       }
     });
 
@@ -321,13 +332,13 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
     dom.panelEl.addEventListener("pointerleave", () => {
       if (!dragging) {
         pointerInsideInteractiveArea = false;
-        setMousePassthrough(true);
+        setMousePassthrough(false);
       }
     });
     dom.emptyStateEl.addEventListener("pointerleave", () => {
       if (!dragging) {
         pointerInsideInteractiveArea = false;
-        setMousePassthrough(true);
+        setMousePassthrough(false);
       }
     });
 

@@ -117,6 +117,70 @@ export function createStoreController({ dom, petDesktop, refreshPetList, state }
     }
   }
 
+  function setStoreProgress({ visible = false, received = 0, total = 0 } = {}) {
+    if (!dom.petStoreProgressEl) {
+      return;
+    }
+    dom.petStoreProgressEl.classList.toggle("hidden", !visible);
+    if (!visible) {
+      dom.petStoreProgressEl.max = 1;
+      dom.petStoreProgressEl.value = 0;
+      dom.petStoreProgressEl.removeAttribute?.("aria-valuetext");
+      return;
+    }
+    if (total > 0) {
+      dom.petStoreProgressEl.max = total;
+      dom.petStoreProgressEl.value = Math.min(received, total);
+      dom.petStoreProgressEl.removeAttribute?.("aria-valuetext");
+      return;
+    }
+    dom.petStoreProgressEl.removeAttribute?.("max");
+    dom.petStoreProgressEl.removeAttribute?.("value");
+    dom.petStoreProgressEl.setAttribute?.("aria-valuetext", received > 0 ? `已下载 ${formatBytes(received)}` : "正在下载");
+  }
+
+  function progressStatus(name, received, total) {
+    if (total > 0) {
+      const percent = Math.max(0, Math.min(100, Math.floor((received / total) * 100)));
+      return `正在下载 ${name}... ${percent}%`;
+    }
+    const downloaded = formatBytes(received);
+    return downloaded ? `正在下载 ${name}... ${downloaded}` : `正在下载 ${name}...`;
+  }
+
+  async function readResponseBuffer(response, onProgress) {
+    const total = Number(response.headers?.get?.("content-length")) || 0;
+    if (response.body?.getReader) {
+      const reader = response.body.getReader();
+      const chunks = [];
+      let received = 0;
+      onProgress(received, total);
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        if (!value) {
+          continue;
+        }
+        const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+        chunks.push(chunk);
+        received += chunk.byteLength;
+        onProgress(received, total);
+      }
+      const bytes = new Uint8Array(received);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return bytes.buffer;
+    }
+    const buffer = await response.arrayBuffer();
+    onProgress(buffer.byteLength, buffer.byteLength);
+    return buffer;
+  }
+
   function appVersion() {
     return state.appInfo.version || "0.0.0";
   }
@@ -263,7 +327,9 @@ export function createStoreController({ dom, petDesktop, refreshPetList, state }
     button.disabled = true;
     const local = localPetFor(remote, state.pets);
     const action = actionLabel(remote, local, appVersion());
-    setStoreStatus(`正在${action} ${remote.displayName || remote.id}...`);
+    const name = remote.displayName || remote.id;
+    setStoreStatus(`正在${action} ${name}...`);
+    setStoreProgress({ visible: true, received: 0, total: Number(remote.sizeBytes) || 0 });
     try {
       if (!isCompatible(remote, appVersion())) {
         throw new Error(`需要主程序 v${remote.minAppVersion} 或更高版本。`);
@@ -272,7 +338,12 @@ export function createStoreController({ dom, petDesktop, refreshPetList, state }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const buffer = await response.arrayBuffer();
+      const buffer = await readResponseBuffer(response, (received, responseTotal) => {
+        const total = responseTotal || Number(remote.sizeBytes) || 0;
+        setStoreProgress({ visible: true, received, total });
+        setStoreStatus(progressStatus(name, received, total));
+      });
+      setStoreStatus(`正在校验 ${name}...`);
       if (remote.sha256) {
         const actual = await sha256Hex(buffer);
         if (actual !== remote.sha256) {
@@ -280,6 +351,7 @@ export function createStoreController({ dom, petDesktop, refreshPetList, state }
         }
       }
       const data = arrayBufferToBase64(buffer);
+      setStoreStatus(`正在安装 ${name}...`);
       const preview = await petDesktop.inspectPetpack(data);
       if (preview.id !== remote.id) {
         throw new Error(`资源索引和宠物包 id 不一致：${remote.id} / ${preview.id}`);
@@ -294,6 +366,7 @@ export function createStoreController({ dom, petDesktop, refreshPetList, state }
       setStoreStatus(`${action}失败：${friendlyPetpackError(error)}。可以打开下载页手动下载。`);
       return false;
     } finally {
+      setStoreProgress({ visible: false });
       button.disabled = false;
     }
   }

@@ -39,6 +39,7 @@ export function getDomRefs() {
     updateAllPetpacksButton: document.querySelector("#updateAllPetpacksButton"),
     refreshStoreButton: document.querySelector("#refreshStoreButton"),
     petStoreStatusEl: document.querySelector("#petStoreStatus"),
+    petStoreProgressEl: document.querySelector("#petStoreProgress"),
     petStoreListEl: document.querySelector("#petStoreList"),
     quitButton: document.querySelector("#quitButton")
   };

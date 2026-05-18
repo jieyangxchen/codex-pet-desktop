@@ -24,6 +24,7 @@ const LATEST_RELEASE_API: &str =
 struct AppInfo {
     display_name: &'static str,
     version: &'static str,
+    platform: &'static str,
     downloads_url: &'static str,
     latest_release_api: &'static str,
     petpack_index_url: &'static str,
@@ -88,6 +89,7 @@ fn get_app_info() -> AppInfo {
     AppInfo {
         display_name: "永生计划",
         version: env!("CARGO_PKG_VERSION"),
+        platform: std::env::consts::OS,
         downloads_url: DOWNLOADS_URL,
         latest_release_api: LATEST_RELEASE_API,
         petpack_index_url: PETPACK_INDEX_URL,
@@ -319,6 +321,11 @@ fn resize_window(app: AppHandle<Wry>, width: u32, height: u32) -> Result<WindowB
 #[tauri::command]
 fn set_ignore_mouse_events(app: AppHandle<Wry>, ignored: bool) -> Result<bool, String> {
     let window = windowing::main_window(&app)?;
+    #[cfg(target_os = "windows")]
+    let ignored = {
+        let _ = ignored;
+        false
+    };
     window
         .set_ignore_cursor_events(ignored)
         .map_err(|error| error.to_string())?;
