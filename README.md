@@ -1,142 +1,89 @@
-# 互联网永生计划
+<h1 align="center">宠物·永生计划</h1>
 
-永生计划是一个独立运行的 Tauri/Rust 桌面宠物应用，兼容 Codex 风格的自定义宠物图集。它不依赖 Codex 启动或运行，只是复用了 `pet.json` + `spritesheet.webp` 的宠物资源格式，方便把已有宠物直接放到桌面上。
+<p align="center">
+  一个独立运行的 Windows/macOS 桌面宠物应用。主程序和宠物资源包解耦，让米粉、米酒、红糖这类宠物以 <code>.petpack</code> 的方式长期保存、独立更新、随时导入。
+</p>
 
-> 这是社区项目，不是 OpenAI 或 Codex 官方应用。
+<p align="center">
+  <a href="https://jieyangxchen.github.io/codex-pet-desktop/">下载页</a> ·
+  <a href="https://github.com/jieyangxchen/codex-pet-desktop/releases/latest">最新 Release</a> ·
+  <a href="https://jieyangxchen.github.io/codex-pet-desktop/petpacks/petpacks.json">宠物包索引</a> ·
+  <a href="https://jieyangxchen.github.io/codex-pet-desktop/petpacks/visual-qa.html">视觉 QA</a>
+</p>
 
-## 功能
+<p align="center">
+  <a href="https://github.com/jieyangxchen/codex-pet-desktop/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jieyangxchen/codex-pet-desktop?label=release"></a>
+  <a href="https://github.com/jieyangxchen/codex-pet-desktop/actions/workflows/release.yml"><img alt="Release workflow" src="https://github.com/jieyangxchen/codex-pet-desktop/actions/workflows/release.yml/badge.svg"></a>
+  <a href="https://github.com/jieyangxchen/codex-pet-desktop/actions/workflows/pages.yml"><img alt="Pages workflow" src="https://github.com/jieyangxchen/codex-pet-desktop/actions/workflows/pages.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
+</p>
 
-- 透明、无边框、默认置顶的桌宠窗口。
-- 透明空白区域默认鼠标穿透，不遮挡桌面点击。
-- Windows 下默认不进任务栏，使用系统托盘图标控制显示、隐藏、召回、暂停自动散步、打开资源库、打开数据目录、置顶和退出。
-- 支持拖动桌宠到屏幕边缘和角落，窗口只保留最小可见区域避免完全拖丢。
-- 支持单击互动、双击跳跃、自动游走、右键控制面板。
-- 主程序不内置宠物资源，宠物通过独立 `.petpack` 资源包导入。
-- 右键控制面板内置宠物资源库，可从 GitHub Pages 索引一键安装或更新宠物包。
-- 首次启动如果还没有宠物，会自动打开宠物资源库，直接安装即可使用。
-- 会记住当前宠物、大小、自动散步和置顶状态，下次启动自动恢复。
-- 宠物资源库支持搜索、分类、按全部/可更新/未安装/已安装筛选，并展示资源包大小、更新时间、作者、许可和更新说明。
-- 支持一键更新全部可更新宠物包，下载后会校验资源索引里的 SHA-256。
-- 右键控制面板按“控制 / 资源库 / 已安装 / 更新”分区，避免资源库和已安装列表挤在同一个面板里。
-- 右键控制面板内置资源管理：查看已安装宠物版本和来源、打开资源目录、卸载已导入资源。
-- 右键控制面板支持检查主程序更新、宠物资源包更新，并显示当前版本、最新版本和更新摘要。
-- 导入 `.petpack` 前会先预览名称和版本；同 id 资源确认后覆盖应用数据目录里的旧版本。
-- 系统托盘菜单会跟随自动散步和置顶状态更新，避免菜单动作和当前状态相反。
-- 每只宠物可配置点击动作、双击动作、空闲动作池、自动散步方向和自然行为节奏。
-- 桌宠窗口会按宠物大小、空状态和控制面板动态调整，减少透明窗口占用桌面点击区域。
-- GitHub Pages 下载页展示宠物首帧预览，并提供动作帧视觉 QA 页面。
-- 可加载外部宠物目录，兼容 Codex 自定义宠物包。
+> 这是社区项目，不是 OpenAI 或 Codex 官方应用。项目复用了 Codex 风格的 `pet.json` + `spritesheet.webp` 宠物资源格式，但主程序不依赖 Codex 启动或运行。
+
+## 这是什么
+
+宠物·永生计划把桌宠分成两部分：
+
+- 主程序：一个 Tauri/Rust 桌面应用，负责透明窗口、拖动、托盘、互动、导入和资源库。
+- 宠物包：每只宠物一个 `.petpack`，里面放 `petpack.json`、`pet.json` 和 `spritesheet.webp`。
+
+这样主程序优化和宠物资源更新可以分开发布。换图、加动作、修宠物资源时，只需要更新 Pages 上的宠物包，不需要重新构建安装包。
+
+## 下载入口
+
+推荐从下载页开始：
+[https://jieyangxchen.github.io/codex-pet-desktop/](https://jieyangxchen.github.io/codex-pet-desktop/)
+
+| 类型 | 链接 | 说明 |
+| --- | --- | --- |
+| Windows 主程序 | [yongsheng-plan-windows-x64.exe](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/yongsheng-plan-windows-x64.exe) | Windows x64 安装包 |
+| macOS Apple Silicon | [yongsheng-plan-macos-arm64.dmg](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/yongsheng-plan-macos-arm64.dmg) | M 系列芯片 Mac |
+| macOS Intel | [yongsheng-plan-macos-x64.dmg](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest/download/yongsheng-plan-macos-x64.dmg) | Intel 芯片 Mac |
+| 最新 Release | [GitHub Releases](https://github.com/jieyangxchen/codex-pet-desktop/releases/latest) | 主程序发布页 |
+| 宠物包索引 | [petpacks.json](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/petpacks.json) | 应用内资源库读取的索引 |
+| 资源视觉检查 | [visual-qa.html](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/visual-qa.html) | 查看每个宠物包的动作帧 |
+
+首次安装主程序后，如果还没有宠物，会自动打开宠物资源库。可以直接在应用里安装宠物，也可以从下载页下载 `.petpack` 后手动导入。
+
+## 当前宠物包
+
+| 宠物 | 文件 | 说明 |
+| --- | --- | --- |
+| 米粉 | [mi-fen-1.0.3.petpack](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/mi-fen-1.0.3.petpack) | 全白猫咪，常态趴着待机 |
+| 米酒 | [mi-jiu-1.0.1.petpack](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/mi-jiu-1.0.1.petpack) | 深色长毛虎斑猫，常态趴着待机 |
+| 红糖 | [tigris-whippet-1.0.2.petpack](https://jieyangxchen.github.io/codex-pet-desktop/petpacks/tigris-whippet-1.0.2.petpack) | 虎斑色惠比特，常态贴近地面休息 |
+
+同一个宠物 id 再次导入时会覆盖应用数据目录里的旧版本。应用内资源库会按索引里的版本、大小、SHA-256 和更新说明判断是否可更新。
+
+## 运行规则
+
+- 主程序正式安装包不内置宠物资源。
+- 首次启动如果没有已安装宠物，会显示空状态并打开资源库入口。
+- `CODEX_PETS_DIR`、应用数据目录和 `~/.codex/pets` 仍可作为外部宠物目录。
+- 宠物包通过 GitHub Pages 分发；主程序通过 GitHub Releases 分发。
+- 推送 `v*` tag 会触发 Release workflow，构建 Windows 和 macOS 主程序。
+- 修改 `resources/pets/**`、下载页或宠物包脚本会触发 Pages workflow，重新生成 `.petpack`、资源索引和下载页。
 
 ## 交互
 
 | 操作 | 行为 |
 | --- | --- |
-| 拖动桌宠 | 移动桌宠位置，拖动时暂停自动游走 |
+| 拖动桌宠 | 移动位置，拖动时暂停自动游走 |
 | 单击桌宠 | 播放当前宠物配置的互动动画 |
 | 双击桌宠 | 播放跳跃动画 |
-| 右键 | 打开或关闭控制面板 |
-| 系统托盘左键 | 显示或隐藏桌宠 |
-| 系统托盘右键 | 打开急救菜单，支持显示、隐藏、召回到屏幕中央、暂停/恢复自动散步、打开资源库、打开数据目录、置顶、退出 |
+| 右键桌宠 | 打开或关闭控制面板 |
+| 托盘左键 | 显示或隐藏桌宠 |
+| 托盘右键 | 打开急救菜单，支持显示、隐藏、召回、暂停/恢复自动散步、打开资源库、打开数据目录、置顶和退出 |
 
-控制面板支持从资源库一键安装或更新宠物包、本地导入宠物包、导入前确认、搜索和筛选资源库、切换宠物、切换动作状态、调整大小、开启/关闭自动游走、开启/关闭置顶、检查主程序和宠物资源更新、打开下载页、资源目录打开、卸载已导入宠物和退出应用。
-
-## 下载
-
-推荐先从 GitHub Releases 下载主程序。宠物资源可以在主程序的“宠物资源库”里一键安装，也可以从 GitHub Pages 下载 `.petpack` 后手动导入。
-
-- `yongsheng-plan-windows-x64.exe`：Windows x64 主程序。
-- `yongsheng-plan-macos-arm64.dmg`：Apple Silicon Mac 主程序。
-- `yongsheng-plan-macos-x64.dmg`：Intel Mac 主程序。
-- `mi-fen-1.0.3.petpack`：米粉宠物包。
-- `mi-jiu-1.0.1.petpack`：米酒宠物包。
-- `tigris-whippet-1.0.2.petpack`：红糖宠物包。
-
-## 安装与运行
-
-Rust/Tauri 是主实现。
-
-```bash
-cargo install tauri-cli --version "^2"
-cd src-tauri
-cargo run
-```
-
-开发模式会扫描仓库里的 `resources/pets`，方便预览和制作资源；正式安装包不内置这些资源。
-
-## Windows 打包
-
-Windows 打包建议在 Windows 环境或 GitHub Actions 中执行：
-
-```bash
-node scripts/build-app.js build windows
-```
-
-GitHub Actions 会在推送 `v*` tag 时自动构建主程序安装包并发布到 Releases。
-
-## Mac 打包
-
-macOS 打包建议在 macOS 环境或 GitHub Actions 中执行：
-
-```bash
-node scripts/build-app.js build macos-arm64
-```
-
-## 宠物包打包
-
-```bash
-node scripts/build-petpacks.js
-```
-
-生成文件位于 `release/petpacks/`。脚本会先校验每个资源包的 `pet.json`、`spritesheet.webp` 和图集尺寸，并输出 `release/petpacks/qa.json`。GitHub Pages workflow 会自动生成 `.petpack`、资源索引、首帧预览、动作帧视觉 QA 页面和下载页。
-
-单独运行资源 QA：
-
-```bash
-node scripts/qa-petpack-assets.js
-```
+控制面板包含控制、资源库、已安装、更新等分区，支持安装/更新宠物包、本地导入、切换宠物、调整大小、切换动作状态、置顶、自动散步、卸载资源和检查更新。
 
 ## 宠物资源格式
 
-每个宠物是一个文件夹，至少包含：
+仓库内每只宠物位于 `resources/pets/<pet-id>/`，至少包含：
 
 ```text
-my-pet/
-  pet.json
-  spritesheet.webp
-```
-
-`pet.json` 示例：
-
-```json
-{
-  "id": "mi-fen",
-  "displayName": "米粉",
-  "description": "米粉，一只全白猫咪，常态趴着待机。",
-  "version": "1.0.3",
-  "author": "Chen",
-  "license": "CC-BY-4.0",
-  "minAppVersion": "0.2.0",
-  "tags": ["猫咪", "白色", "趴着"],
-  "changelog": ["增加更自然的散步节奏和拖拽后反馈。", "修正单击互动动作的比例和画风。"],
-  "behavior": {
-    "clickState": "waiting",
-    "doubleClickState": "jumping",
-    "idleStates": ["idle", "waiting", "review"],
-    "wanderDirections": [-1, 1, 0],
-    "natural": {
-      "nextWanderDelayMs": [5200, 11000],
-      "idleDurationMs": [1800, 4200],
-      "walkDurationMs": [2600, 5600],
-      "edgePauseMs": [900, 2200],
-      "edgePauseStates": ["waiting", "review"],
-      "postDragState": "waiting",
-      "postDragMs": 900,
-      "clickReturnState": "idle",
-      "doubleClickReturnState": "idle"
-    }
-  },
-  "spritesheetPath": "spritesheet.webp"
-}
+pet.json
+spritesheet.webp
 ```
 
 `.petpack` 是 zip 容器，根目录包含：
@@ -147,7 +94,7 @@ pet.json
 spritesheet.webp
 ```
 
-`petpack.json` 示例：
+`petpack.json` 最小字段：
 
 ```json
 {
@@ -155,20 +102,17 @@ spritesheet.webp
   "formatVersion": 1,
   "id": "mi-fen",
   "displayName": "米粉",
-  "version": "1.0.0",
-  "author": "Chen",
-  "license": "CC-BY-4.0",
-  "minAppVersion": "0.2.0",
-  "tags": ["猫咪", "白色"],
-  "changelog": ["首版资源包。"]
+  "version": "1.0.3"
 }
 ```
 
 图集要求：
 
-- 文件尺寸：`1536x1872`
-- 网格：8 列 x 9 行
-- 单帧：`192x208`
+| 项 | 要求 |
+| --- | --- |
+| 文件尺寸 | `1536x1872` |
+| 网格 | 8 列 x 9 行 |
+| 单帧 | `192x208` |
 
 | 行号 | 状态 | 帧数 |
 | --- | --- | --- |
@@ -182,45 +126,79 @@ spritesheet.webp
 | 7 | `running` | 6 |
 | 8 | `review` | 6 |
 
-## 外部宠物目录
+## 开发
 
-应用会按顺序扫描这些位置：
+环境要求：
 
-1. `CODEX_PETS_DIR` 环境变量指定的目录，多个目录按系统路径分隔符分开。
-2. 应用用户数据目录下的 `pets`。
-3. 应用内置资源目录。
-4. `~/.codex/pets`。
+- Node.js 22
+- Rust stable
+- Tauri CLI v2
 
-如果多个目录里出现相同 `id` 的宠物，先扫描到的会优先使用。
-
-## 开发检查
+常用命令：
 
 ```bash
+npm install
 npm run smoke
+
+cd src-tauri
+cargo test
+cargo run
 ```
 
-这个检查会验证宠物资源格式、空宠物状态、导入预览确认、导入缓存刷新、中文界面文案、控制面板分区、应用内资源库搜索/筛选/安装/更新、托盘命令响应、资源管理器、主程序和宠物资源更新入口、下载页生成、视觉 QA 页面和 workflow 配置。Rust 测试还会读取每个 `spritesheet.webp`，确认所有声明动作帧都有可见内容。
-
-也可以运行 Tauri 启动冒烟检查：
+打包主程序：
 
 ```bash
-cd src-tauri
-PET_DESKTOP_E2E=1 cargo run
+node scripts/build-app.js build windows
+node scripts/build-app.js build macos-arm64
+node scripts/build-app.js build macos-x64
 ```
+
+生成宠物包和下载页：
+
+```bash
+node scripts/build-petpacks.js
+node scripts/render-download-page.js
+```
+
+开发模式会扫描仓库里的 `resources/pets`，方便制作和预览资源；正式安装包不依赖这个目录。
 
 ## 项目结构
 
 ```text
-resources/pets/        用于生成独立 .petpack 的宠物资源
-src-tauri/             Rust/Tauri 主进程、窗口、托盘、打包配置
-src/app/               打包进主程序的前端运行时文件
-src/*-smoke.js         Node 冒烟测试，不进入主程序前端运行目录
-scripts/build-app.js   生成无内置资源的 Tauri 主程序安装包
-scripts/build-petpacks.js 生成独立宠物资源包
-scripts/qa-petpack-assets.js 校验宠物资源 manifest 和 spritesheet 尺寸
-scripts/render-download-page.js 根据 petpacks.json 生成下载页
-src/smoke.js           本地冒烟检查
+resources/pets/                 宠物资源源目录，用于生成独立 .petpack
+src-tauri/                      Rust/Tauri 主进程、窗口、托盘、打包配置
+src/app/                        打包进主程序的前端运行时文件
+src/*-smoke.js                  Node 冒烟测试
+scripts/build-app.js            生成无内置资源的主程序安装包
+scripts/build-petpacks.js       生成独立宠物资源包和 petpacks.json
+scripts/qa-petpack-assets.js    校验宠物 manifest、图集尺寸和动作帧
+scripts/render-download-page.js 根据 petpacks.json 生成 GitHub Pages 下载页
+docs/index.html                 GitHub Pages 静态下载页
 ```
+
+## 发布
+
+主程序发布：
+
+```bash
+git tag v0.2.9
+git push origin v0.2.9
+```
+
+GitHub Actions 会构建并发布：
+
+- `yongsheng-plan-windows-x64.exe`
+- `yongsheng-plan-macos-arm64.dmg`
+- `yongsheng-plan-macos-x64.dmg`
+
+宠物包发布：
+
+```bash
+node scripts/build-petpacks.js
+node scripts/render-download-page.js
+```
+
+提交 `resources/pets/**`、`scripts/build-petpacks.js`、`scripts/render-download-page.js` 或 `docs/index.html` 后，Pages workflow 会重新部署下载页和宠物包资源。
 
 ## 许可证
 
