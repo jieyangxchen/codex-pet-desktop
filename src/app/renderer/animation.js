@@ -2,9 +2,23 @@ import { CELL_HEIGHT, CELL_WIDTH, STATES, STATE_LABELS } from "./constants.js";
 
 export function createAnimation(dom) {
   let stateName = "idle";
+  let manualDirection = "right";
   let frame = 0;
   let lastFrameAt = 0;
   let onceReturnState = "idle";
+
+  function normalizedDirection(direction) {
+    return direction === "left" ? "left" : "right";
+  }
+
+  function applyDirection() {
+    const scale = stateName === "running-left" || stateName === "running-right"
+      ? 1
+      : normalizedDirection(manualDirection) === "left"
+        ? -1
+        : 1;
+    dom.petEl.style.setProperty("--direction-scale", String(scale));
+  }
 
   function setFrame() {
     const state = STATES[stateName] || STATES.idle;
@@ -22,7 +36,13 @@ export function createAnimation(dom) {
     lastFrameAt = 0;
     onceReturnState = onceReturn;
     dom.stateSelect.value = nextState;
+    applyDirection();
     setFrame();
+  }
+
+  function setDirection(direction) {
+    manualDirection = normalizedDirection(direction);
+    applyDirection();
   }
 
   function renderStateOptions() {
@@ -57,6 +77,7 @@ export function createAnimation(dom) {
   return {
     animationLoop,
     renderStateOptions,
+    setDirection,
     setState
   };
 }

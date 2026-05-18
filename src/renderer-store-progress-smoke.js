@@ -63,7 +63,7 @@ async function main() {
     petDesktop: {
       listPets: async () => ({ pets: [oldPet], errors: [] }),
       getAppInfo: async () => ({
-        version: "0.2.12",
+        version: "0.2.13",
         latestReleaseApi: "",
         downloadsUrl: "",
         petpackIndexUrl: "https://example.test/petpacks/petpacks.json"

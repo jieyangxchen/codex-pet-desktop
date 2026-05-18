@@ -18,6 +18,7 @@ const state = {
   preferences: {
     selectedPetId: "",
     scale: 0.6,
+    petDirection: "right",
     autoWander: true,
     alwaysOnTop: true
   },
@@ -42,6 +43,7 @@ function currentPreferences(overrides = {}) {
   return {
     selectedPetId: state.activePet?.id || dom.petSelect.value || "",
     scale: Number(dom.scaleRange.value) || 0.6,
+    petDirection: state.preferences.petDirection || "right",
     autoWander: Boolean(dom.wanderToggle.checked),
     alwaysOnTop: Boolean(dom.topToggle.checked),
     ...overrides
@@ -69,8 +71,32 @@ function applyPreferences(preferences) {
   state.preferences = { ...state.preferences, ...(preferences || {}) };
   dom.scaleRange.value = String(state.preferences.scale || 0.6);
   document.documentElement.style.setProperty("--scale", dom.scaleRange.value);
+  applyPetDirection(state.preferences.petDirection);
   dom.wanderToggle.checked = state.preferences.autoWander !== false;
   dom.topToggle.checked = state.preferences.alwaysOnTop !== false;
+}
+
+function normalizedPetDirection(direction) {
+  return direction === "left" ? "left" : "right";
+}
+
+function directionLabel(direction) {
+  return direction === "left" ? "朝左" : "朝右";
+}
+
+function applyPetDirection(direction) {
+  const nextDirection = normalizedPetDirection(direction);
+  state.preferences.petDirection = nextDirection;
+  animation.setDirection(nextDirection);
+  dom.directionLeftButton?.classList.toggle("active", nextDirection === "left");
+  dom.directionRightButton?.classList.toggle("active", nextDirection === "right");
+}
+
+function setPetDirection(direction) {
+  const nextDirection = normalizedPetDirection(direction);
+  applyPetDirection(nextDirection);
+  setPetStatus(`已切换为${directionLabel(nextDirection)}。`);
+  savePreferences({ petDirection: nextDirection });
 }
 
 const animation = createAnimation(dom);
@@ -200,6 +226,11 @@ async function init() {
   dom.scaleRange.addEventListener("input", () => {
     windowLayout.syncWindowLayout().catch(() => {});
     savePreferences({ scale: Number(dom.scaleRange.value) || 0.6 });
+  });
+  [dom.directionLeftButton, dom.directionRightButton].forEach((button) => {
+    button?.addEventListener("click", () => {
+      setPetDirection(button.dataset.petDirection);
+    });
   });
   dom.wanderToggle.addEventListener("change", () => {
     savePreferences({ autoWander: Boolean(dom.wanderToggle.checked) });

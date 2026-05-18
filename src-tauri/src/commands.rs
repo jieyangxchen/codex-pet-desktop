@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::Serialize;
-use std::fs;
+use std::{fs, path::Path};
 use tauri::{AppHandle, Wry};
 use tauri_plugin_opener::OpenerExt;
 
@@ -101,6 +101,47 @@ fn open_downloads(app: AppHandle<Wry>) -> Result<(), String> {
     app.opener()
         .open_url(DOWNLOADS_URL, None::<&str>)
         .map_err(|error| error.to_string())
+}
+
+fn safe_update_file_name(file_name: &str) -> Result<String, String> {
+    let name = Path::new(file_name)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "安装包文件名无效".to_string())?;
+    if name != file_name {
+        return Err("安装包文件名不能包含路径".to_string());
+    }
+    if !name
+        .chars()
+        .all(|character| character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '_'))
+    {
+        return Err("安装包文件名包含不支持的字符".to_string());
+    }
+    let lower = name.to_ascii_lowercase();
+    if !(lower.ends_with(".exe") || lower.ends_with(".dmg")) {
+        return Err("只支持启动 .exe 或 .dmg 安装包".to_string());
+    }
+    Ok(name.to_string())
+}
+
+#[tauri::command]
+fn install_app_update(app: AppHandle<Wry>, data: String, file_name: String) -> Result<(), String> {
+    let bytes = BASE64.decode(data).map_err(|error| error.to_string())?;
+    if bytes.is_empty() {
+        return Err("安装包为空".to_string());
+    }
+    let safe_name = safe_update_file_name(&file_name)?;
+    let dir = pet_catalog::user_data_dir(&app)
+        .ok_or_else(|| "Could not resolve app data directory".to_string())?
+        .join("updates");
+    fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    let path = dir.join(safe_name);
+    fs::write(&path, bytes).map_err(|error| error.to_string())?;
+    app.opener()
+        .open_path(path.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|error| error.to_string())?;
+    app.exit(0);
+    Ok(())
 }
 
 pub(crate) fn open_app_data_dir(app: &AppHandle<Wry>) -> Result<(), String> {
@@ -391,6 +432,7 @@ pub(crate) fn handler() -> impl Fn(tauri::ipc::Invoke<Wry>) -> bool + Send + Syn
     tauri::generate_handler![
         list_pets,
         get_app_info,
+        install_app_update,
         open_downloads,
         open_data_dir,
         get_preferences,
@@ -413,7 +455,7 @@ pub(crate) fn handler() -> impl Fn(tauri::ipc::Invoke<Wry>) -> bool + Send + Syn
 
 #[cfg(test)]
 mod tests {
-    use super::{compare_versions, petpack_is_compatible, version_relation};
+    use super::{compare_versions, petpack_is_compatible, safe_update_file_name, version_relation};
     use crate::petpack::PetpackSummary;
 
     #[test]
@@ -451,5 +493,20 @@ mod tests {
         };
 
         assert!(!petpack_is_compatible(&summary));
+    }
+
+    #[test]
+    fn validates_update_installer_file_names() {
+        assert_eq!(
+            safe_update_file_name("yongsheng-plan-windows-x64.exe").expect("valid exe"),
+            "yongsheng-plan-windows-x64.exe"
+        );
+        assert_eq!(
+            safe_update_file_name("yongsheng-plan-macos-arm64.dmg").expect("valid dmg"),
+            "yongsheng-plan-macos-arm64.dmg"
+        );
+        assert!(safe_update_file_name("../bad.exe").is_err());
+        assert!(safe_update_file_name("bad.zip").is_err());
+        assert!(safe_update_file_name("bad name.exe").is_err());
     }
 }

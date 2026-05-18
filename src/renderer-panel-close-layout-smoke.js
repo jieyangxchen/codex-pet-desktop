@@ -45,7 +45,7 @@ async function main() {
   const { documentObject, elements, flush, windowObject } = await loadRenderer({
     petDesktop: {
       listPets: async () => ({ pets: [pet], errors: [] }),
-      getAppInfo: async () => ({ version: "0.2.12", latestReleaseApi: "", petpackIndexUrl: "" }),
+      getAppInfo: async () => ({ version: "0.2.13", latestReleaseApi: "", petpackIndexUrl: "" }),
       getPreferences: async () => ({ scale: 0.6, autoWander: false }),
       savePreferences: async (value) => value,
       inspectPetpack: async () => {

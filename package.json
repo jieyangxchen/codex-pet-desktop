@@ -1,6 +1,6 @@
 {
   "name": "yongsheng-plan",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "Standalone desktop pet app for the Internet Immortality Project.",
   "license": "MIT",
   "author": "jieyangxchen",
@@ -23,7 +23,7 @@
     "start:tauri": "cd src-tauri && cargo run",
     "check:tauri": "cd src-tauri && cargo check",
     "e2e:tauri": "cd src-tauri && PET_DESKTOP_E2E=1 cargo run",
-    "smoke": "node src/build-app-config-smoke.js && node src/smoke.js && node src/renderer-petpack-helpers-smoke.mjs && node src/renderer-empty-smoke.js && node src/renderer-empty-window-layout-smoke.js && node src/renderer-import-cache-smoke.js && node src/renderer-manager-smoke.js && node src/renderer-update-smoke.js && node src/renderer-chinese-smoke.js && node src/renderer-store-smoke.js && node src/renderer-store-progress-smoke.js && node src/renderer-window-interaction-smoke.js && node src/renderer-panel-close-layout-smoke.js && node src/renderer-tray-command-smoke.js && node src/renderer-settings-smoke.js && node src/renderer-first-run-store-smoke.js && node src/renderer-store-filter-smoke.js && node src/renderer-store-enhanced-smoke.js && node src/renderer-panel-tabs-smoke.js && node src/renderer-tray-state-sync-smoke.js && node src/renderer-update-detail-smoke.js && node src/renderer-natural-behavior-smoke.js && node src/renderer-edge-behavior-smoke.js && node src/renderer-behavior-config-smoke.js && node src/renderer-window-layout-smoke.js && node src/petpack-qa-smoke.js && npm run build:petpacks && node src/visual-qa-page-smoke.js && node src/download-page-smoke.js && node src/workflow-runtime-smoke.js",
+    "smoke": "node src/build-app-config-smoke.js && node src/smoke.js && node src/renderer-petpack-helpers-smoke.mjs && node src/renderer-empty-smoke.js && node src/renderer-empty-window-layout-smoke.js && node src/renderer-import-cache-smoke.js && node src/renderer-manager-smoke.js && node src/renderer-update-smoke.js && node src/renderer-direction-smoke.js && node src/renderer-chinese-smoke.js && node src/renderer-store-smoke.js && node src/renderer-store-progress-smoke.js && node src/renderer-window-interaction-smoke.js && node src/renderer-panel-close-layout-smoke.js && node src/renderer-tray-command-smoke.js && node src/renderer-settings-smoke.js && node src/renderer-first-run-store-smoke.js && node src/renderer-store-filter-smoke.js && node src/renderer-store-enhanced-smoke.js && node src/renderer-panel-tabs-smoke.js && node src/renderer-tray-state-sync-smoke.js && node src/renderer-update-detail-smoke.js && node src/renderer-natural-behavior-smoke.js && node src/renderer-edge-behavior-smoke.js && node src/renderer-behavior-config-smoke.js && node src/renderer-window-layout-smoke.js && node src/petpack-qa-smoke.js && npm run build:petpacks && node src/visual-qa-page-smoke.js && node src/download-page-smoke.js && node src/workflow-runtime-smoke.js",
     "build:app": "node scripts/build-app.js build",
     "build:petpacks": "node scripts/build-petpacks.js"
   }

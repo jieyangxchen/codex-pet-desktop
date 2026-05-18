@@ -4,6 +4,7 @@
   --atlas-width: 1536px;
   --atlas-height: 1872px;
   --scale: 0.6;
+  --direction-scale: 1;
   --panel-bg: rgba(20, 23, 28, 0.92);
   --panel-border: rgba(255, 255, 255, 0.14);
   --text: #f5f7fb;
@@ -44,7 +45,7 @@ html.panel-with-pet #stage {
 #pet {
   width: var(--cell-width);
   height: var(--cell-height);
-  transform: scale(var(--scale));
+  transform: scale(var(--scale)) scaleX(var(--direction-scale));
   transform-origin: center bottom;
   image-rendering: auto;
   background-repeat: no-repeat;
@@ -190,6 +191,7 @@ html.panel-with-pet #pet {
 }
 
 label,
+.row-label,
 .check-row {
   color: var(--muted);
   font-size: 12px;
@@ -238,6 +240,24 @@ button {
 }
 
 button:hover {
+  border-color: var(--accent);
+}
+
+.direction-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.direction-control button {
+  min-height: 28px;
+  margin-top: 0;
+  font-size: 12px;
+}
+
+.direction-control button.active {
+  color: #10151b;
+  background: var(--accent);
   border-color: var(--accent);
 }
 

@@ -130,6 +130,8 @@ async function loadRenderer(options = {}) {
     "#petSelect",
     "#stateSelect",
     "#scaleRange",
+    "#directionLeftButton",
+    "#directionRightButton",
     "#wanderToggle",
     "#topToggle",
     "#tabControl",
@@ -155,6 +157,7 @@ async function loadRenderer(options = {}) {
     "#openDownloadsButton",
     "#openStoreButton",
     "#updateStatus",
+    "#appUpdateProgress",
     "#petStore",
     "#storeSearch",
     "#storeTagFilter",
@@ -171,7 +174,10 @@ async function loadRenderer(options = {}) {
   elements.get("#tabStore").dataset.panelTab = "storeSection";
   elements.get("#tabManager").dataset.panelTab = "managerSection";
   elements.get("#tabUpdate").dataset.panelTab = "updateSection";
+  elements.get("#directionLeftButton").dataset.petDirection = "left";
+  elements.get("#directionRightButton").dataset.petDirection = "right";
   elements.get("#panel").classList.add("hidden");
+  elements.get("#appUpdateProgress").classList.add("hidden");
   elements.get("#petStoreProgress").classList.add("hidden");
   elements.get("#importPreview").classList.add("hidden");
   elements.get("#tabControl").classList.add("active");

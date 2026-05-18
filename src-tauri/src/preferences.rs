@@ -4,10 +4,11 @@ use std::{fs, path::Path};
 const PREFERENCES_FILE: &str = "preferences.json";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(default, rename_all = "camelCase")]
 pub(crate) struct UserPreferences {
     pub(crate) selected_pet_id: String,
     pub(crate) scale: f64,
+    pub(crate) pet_direction: String,
     pub(crate) auto_wander: bool,
     pub(crate) always_on_top: bool,
 }
@@ -17,6 +18,7 @@ impl Default for UserPreferences {
         Self {
             selected_pet_id: String::new(),
             scale: 0.6,
+            pet_direction: "right".to_string(),
             auto_wander: true,
             always_on_top: true,
         }
@@ -70,6 +72,7 @@ mod tests {
         let preferences = UserPreferences {
             selected_pet_id: "mi-fen".to_string(),
             scale: 1.2,
+            pet_direction: "left".to_string(),
             auto_wander: false,
             always_on_top: false,
         };
@@ -91,6 +94,26 @@ mod tests {
             load_preferences(&root).expect("load defaults"),
             UserPreferences::default()
         );
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn missing_newer_preference_fields_use_defaults() {
+        let root = temp_root();
+        std::fs::create_dir_all(&root).expect("create temp root");
+        std::fs::write(
+            root.join("preferences.json"),
+            br#"{"selectedPetId":"mi-fen","scale":1.1,"autoWander":false,"alwaysOnTop":true}"#,
+        )
+        .expect("write old preferences");
+
+        let loaded = load_preferences(&root).expect("load preferences");
+
+        assert_eq!(loaded.selected_pet_id, "mi-fen");
+        assert_eq!(loaded.scale, 1.1);
+        assert_eq!(loaded.pet_direction, "right");
+        assert!(!loaded.auto_wander);
+        assert!(loaded.always_on_top);
         let _ = std::fs::remove_dir_all(root);
     }
 }

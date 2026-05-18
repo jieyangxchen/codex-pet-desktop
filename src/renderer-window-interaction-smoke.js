@@ -17,7 +17,7 @@ async function main() {
     petDesktop: {
       listPets: async () => ({ pets: [], errors: [] }),
       getAppInfo: async () => ({
-        version: "0.2.12",
+        version: "0.2.13",
         platform: "windows",
         latestReleaseApi: "",
         downloadsUrl: "",

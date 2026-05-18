@@ -39,6 +39,13 @@
             <label for="scaleRange">大小</label>
             <input id="scaleRange" type="range" min="0.6" max="1.8" step="0.1" value="0.6" />
           </div>
+          <div class="panel-row">
+            <span class="row-label">朝向</span>
+            <div class="direction-control" role="group" aria-label="宠物朝向">
+              <button id="directionLeftButton" type="button" data-pet-direction="left">朝左</button>
+              <button id="directionRightButton" type="button" data-pet-direction="right">朝右</button>
+            </div>
+          </div>
           <label class="check-row">
             <input id="wanderToggle" type="checkbox" checked />
             <span>自动散步</span>
@@ -89,6 +96,7 @@
             <button id="openStoreButton" type="button">打开资源库</button>
           </div>
           <p id="updateStatus" class="update-status" aria-live="polite"></p>
+          <progress id="appUpdateProgress" class="store-progress hidden" max="1" value="0" aria-label="主程序更新下载进度"></progress>
         </section>
       </section>
       <input id="petpackInput" class="petpack-input" type="file" accept=".petpack,application/zip" aria-label="选择宠物包" />
