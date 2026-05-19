@@ -155,6 +155,60 @@ async function assertLegacyDelayWhenNaturalLifeDisabled() {
   }
 }
 
+async function assertLegacyDragFeedbackKeepsDefaultOnceReturn() {
+  const pet = lifePet();
+  pet.behavior.natural.postDragState = "jumping";
+  pet.behavior.natural.postDragMs = 333;
+  const { animationFrames, elements, timeouts } = await loadRenderer({
+    random: () => 0,
+    petDesktop: createPetDesktop({
+      pet,
+      preferences: { autoWander: true, naturalLife: false }
+    })
+  });
+
+  elements.get("#pet").dispatch("pointerdown", {
+    button: 0,
+    pointerId: 1,
+    screenX: 100,
+    screenY: 100
+  });
+  elements.get("#pet").dispatch("pointermove", {
+    pointerId: 1,
+    screenX: 116,
+    screenY: 100
+  });
+  elements.get("#pet").dispatch("pointerup", {
+    pointerId: 1,
+    screenX: 116,
+    screenY: 100
+  });
+
+  if (elements.get("#stateSelect").value !== "jumping" || timeouts.at(-1)?.delay !== 333) {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        reason: "legacy drag feedback did not use manifest postDragState/postDragMs",
+        state: elements.get("#stateSelect").value,
+        delay: timeouts.at(-1)?.delay
+      })
+    );
+    process.exit(1);
+  }
+
+  await advanceOnceAnimation(animationFrames);
+  if (elements.get("#stateSelect").value !== "idle") {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        reason: "legacy drag feedback changed the default once return state",
+        state: elements.get("#stateSelect").value
+      })
+    );
+    process.exit(1);
+  }
+}
+
 async function assertAutoWanderGateKeepsClickActive() {
   const moveCalls = [];
   const { elements, flush, timeouts } = await loadRenderer({
@@ -196,6 +250,7 @@ async function assertAutoWanderGateKeepsClickActive() {
 async function main() {
   await assertNaturalLifeUsesPhasePlan();
   await assertLegacyDelayWhenNaturalLifeDisabled();
+  await assertLegacyDragFeedbackKeepsDefaultOnceReturn();
   await assertAutoWanderGateKeepsClickActive();
   console.log(JSON.stringify({ ok: true }, null, 2));
 }

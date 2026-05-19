@@ -267,11 +267,15 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
       dom.petEl.releasePointerCapture?.(event.pointerId);
       if (movedDuringDrag && hasActivePet()) {
         const behavior = refreshLifeEngine();
-        const plan = lifeEngine.planInteraction("dragEnd");
+        const plan = naturalLifeEnabled() ? lifeEngine.planInteraction("dragEnd") : null;
         suppressNextClick = true;
-        animation.setState(plan?.state || behavior.natural.postDragState, {
-          onceReturn: plan?.onceReturn || behavior.natural.postDragState
-        });
+        if (plan) {
+          animation.setState(plan.state || behavior.natural.postDragState, {
+            onceReturn: plan.onceReturn || behavior.natural.postDragState
+          });
+        } else {
+          animation.setState(behavior.natural.postDragState);
+        }
         scheduleWander(plan?.durationMs ?? behavior.natural.postDragMs);
       } else {
         scheduleWander();
