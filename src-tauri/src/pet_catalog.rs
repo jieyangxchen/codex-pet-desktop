@@ -1,4 +1,5 @@
 use serde::Serialize;
+use serde_json::Value;
 use std::{
     collections::HashSet,
     env, fs,
@@ -80,6 +81,10 @@ pub(crate) struct PetBehavior {
     double_click_state: String,
     idle_states: Vec<String>,
     wander_directions: Vec<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    natural: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    life: Option<Value>,
 }
 
 impl Default for PetBehavior {
@@ -93,6 +98,8 @@ impl Default for PetBehavior {
                 "idle".to_string(),
             ],
             wander_directions: vec![-1, 1, 0],
+            natural: None,
+            life: None,
         }
     }
 }
@@ -158,6 +165,8 @@ struct PetBehaviorManifest {
     double_click_state: Option<String>,
     idle_states: Option<Vec<String>>,
     wander_directions: Option<Vec<i32>>,
+    natural: Option<Value>,
+    life: Option<Value>,
 }
 
 impl From<PetBehaviorManifest> for PetBehavior {
@@ -176,6 +185,8 @@ impl From<PetBehaviorManifest> for PetBehavior {
                 .wander_directions
                 .filter(|directions| !directions.is_empty())
                 .unwrap_or(default.wander_directions),
+            natural: value.natural,
+            life: value.life,
         }
     }
 }
@@ -652,6 +663,57 @@ mod tests {
         assert_eq!(list.pets[0].min_app_version, "0.2.0");
         assert_eq!(list.pets[0].tags, vec!["猫咪", "白色"]);
         assert_eq!(list.pets[0].changelog, vec!["更新图集"]);
+    }
+
+    #[test]
+    fn surfaces_manifest_behavior_natural_and_life_config() {
+        let root = temp_root();
+        let pet = root.join("mi-fen");
+        fs::create_dir_all(&pet).expect("create pet");
+        fs::write(pet.join("spritesheet.webp"), b"webp").expect("write sprite");
+        fs::write(
+            pet.join("pet.json"),
+            r#"{
+                "id":"mi-fen",
+                "displayName":"米粉",
+                "behavior":{
+                    "clickState":"waiting",
+                    "idleStates":["review"],
+                    "wanderDirections":[0],
+                    "natural":{
+                        "nextWanderDelayMs":[123,456],
+                        "postDragState":"review"
+                    },
+                    "life":{
+                        "phases":[
+                            {
+                                "id":"active",
+                                "from":10,
+                                "to":18,
+                                "idleStates":["review"],
+                                "wanderDirections":[0]
+                            }
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .expect("write manifest");
+
+        let list = list_pet_packages_from_roots(vec![root]);
+        let pet_value = serde_json::to_value(&list.pets[0]).expect("serialize pet");
+        let behavior = &pet_value["behavior"];
+
+        assert_eq!(behavior["clickState"], "waiting");
+        assert_eq!(behavior["idleStates"], serde_json::json!(["review"]));
+        assert_eq!(behavior["wanderDirections"], serde_json::json!([0]));
+        assert_eq!(
+            behavior["natural"]["nextWanderDelayMs"],
+            serde_json::json!([123, 456])
+        );
+        assert_eq!(behavior["natural"]["postDragState"], "review");
+        assert_eq!(behavior["life"]["phases"][0]["id"], "active");
+        assert_eq!(behavior["life"]["phases"][0]["from"], 10);
     }
 
     #[test]
