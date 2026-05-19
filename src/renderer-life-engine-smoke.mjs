@@ -127,6 +127,45 @@ assert(malformedLifeIdle?.state === "waiting" && malformedLifeIdle.direction ===
   malformedLifeIdle
 });
 
+const partialLifeMiss = createLifeEngine({
+  behavior: {
+    idleStates: ["review"],
+    wanderDirections: [0],
+    natural: {
+      nextWanderDelayMs: [222, 222],
+      idleDurationMs: [111, 111]
+    },
+    life: {
+      phases: [
+        {
+          id: "wake",
+          from: 6,
+          to: 10,
+          idleStates: ["waiting"],
+          wanderDirections: [0],
+          nextWanderDelayMs: [500, 500],
+          idleDurationMs: [700, 700]
+        }
+      ]
+    }
+  },
+  preferences: { naturalLife: true },
+  startedAtMs: 0,
+  startPetHour: 13,
+  now: () => 0,
+  random: () => 0
+}).planAutonomous({ autoWander: true });
+assert(
+  partialLifeMiss?.state === "review" &&
+    partialLifeMiss.direction === 0 &&
+    partialLifeMiss.durationMs === 111 &&
+    partialLifeMiss.nextDelayMs === 222,
+  {
+    reason: "partial behavior.life.phases miss should fall back to manifest baseline",
+    partialLifeMiss
+  }
+);
+
 const defaultBehavior = activeBehavior(null);
 assert(
   defaultBehavior.clickState === "waving" &&
@@ -168,6 +207,37 @@ const updateEngine = createLifeEngine(null);
 updateEngine.update(null).update({ behavior: null, preferences: null });
 assert(updateEngine.planInteraction("click")?.state === "waving", {
   reason: "update should tolerate null data and keep defaults"
+});
+
+const updateHourEngine = createLifeEngine({
+  behavior: { idleStates: ["review"], wanderDirections: [0] },
+  preferences: { naturalLife: true },
+  startedAtMs: 0,
+  startPetHour: 13,
+  now: () => 0,
+  random: () => 0
+});
+updateHourEngine.update({ startPetHour: undefined });
+const updateHourIdle = updateHourEngine.planAutonomous({ autoWander: true });
+assert(updateHourIdle?.phaseId === "active" && updateHourIdle?.state === "review", {
+  reason: "undefined startPetHour update should preserve previous pet hour",
+  updateHourIdle
+});
+
+const malformedFunctionsEngine = createLifeEngine({
+  behavior: { idleStates: ["review"], wanderDirections: [0] },
+  preferences: { naturalLife: true },
+  startedAtMs: 0,
+  startPetHour: 13,
+  now: "bad",
+  random: "bad"
+});
+const malformedFunctionsClick = malformedFunctionsEngine.planInteraction("click");
+const malformedFunctionsIdle = malformedFunctionsEngine.planAutonomous({ autoWander: true });
+assert(malformedFunctionsClick?.state === "waving" && malformedFunctionsIdle?.state, {
+  reason: "malformed now/random should not break planning",
+  malformedFunctionsClick,
+  malformedFunctionsIdle
 });
 
 console.log(JSON.stringify({ ok: true }, null, 2));

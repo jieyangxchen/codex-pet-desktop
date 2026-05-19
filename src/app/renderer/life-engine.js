@@ -128,15 +128,17 @@ export function createLifeEngine(options = {}) {
     startedAtMs,
     startPetHour = 8
   } = source;
+  let clock = typeof now === "function" ? now : () => Date.now();
+  let rng = typeof random === "function" ? random : () => Math.random();
   let normalized = activeBehavior(behavior);
-  let engineStartedAtMs = finiteNumber(startedAtMs, finiteNumber(now(), 0));
-  let engineStartPetHour = wrapHour(startPetHour);
+  let engineStartedAtMs = finiteNumber(startedAtMs, safeNow(clock));
+  let engineStartPetHour = wrapHour(finiteNumber(startPetHour, 8));
   let naturalLife = naturalLifeEnabled(preferences);
 
   function currentPhase() {
     return phaseForPetHour(
       petHourAt({
-        nowMs: now(),
+        nowMs: safeNow(clock),
         startedAtMs: engineStartedAtMs,
         startPetHour: engineStartPetHour
       }),
@@ -145,13 +147,13 @@ export function createLifeEngine(options = {}) {
   }
 
   function pick(items) {
-    const index = Math.min(Math.floor(safeRandom(random) * items.length), items.length - 1);
+    const index = Math.min(Math.floor(safeRandom(rng) * items.length), items.length - 1);
     return items[index] ?? items[0];
   }
 
   function randomDuration(range) {
     const [min, max] = range;
-    return min + safeRandom(random) * (max - min);
+    return min + safeRandom(rng) * (max - min);
   }
 
   function phaseReturnState() {
@@ -174,7 +176,16 @@ export function createLifeEngine(options = {}) {
         engineStartedAtMs = finiteNumber(source.startedAtMs, engineStartedAtMs);
       }
       if ("startPetHour" in source) {
-        engineStartPetHour = wrapHour(source.startPetHour);
+        const nextStartPetHour = Number(source.startPetHour);
+        if (Number.isFinite(nextStartPetHour)) {
+          engineStartPetHour = wrapHour(nextStartPetHour);
+        }
+      }
+      if ("now" in source) {
+        clock = typeof source.now === "function" ? source.now : () => Date.now();
+      }
+      if ("random" in source) {
+        rng = typeof source.random === "function" ? source.random : () => Math.random();
       }
       return this;
     },
@@ -230,11 +241,15 @@ export function createLifeEngine(options = {}) {
 }
 
 function normalizedPhases(phases, behavior = DEFAULT_BEHAVIOR) {
-  const source = Array.isArray(phases) && phases.length ? phases : DEFAULT_PHASES;
+  const hasCustomPhases = Array.isArray(phases) && phases.length > 0;
+  const source = hasCustomPhases ? phases : DEFAULT_PHASES;
   const normalized = source
     .map((phase, index) => normalizePhase(phase, DEFAULT_PHASES[index % DEFAULT_PHASES.length], behavior))
     .filter(Boolean);
-  return normalized.length ? normalized : defaultPhasesForBehavior(behavior);
+  if (!normalized.length) {
+    return defaultPhasesForBehavior(behavior);
+  }
+  return hasCustomPhases ? [...normalized, ...defaultPhasesForBehavior(behavior)] : normalized;
 }
 
 function defaultPhasesForBehavior(behavior) {
@@ -323,11 +338,22 @@ function validDirections(directions, fallback) {
 }
 
 function safeRandom(random) {
+  if (typeof random !== "function") {
+    return Math.random();
+  }
   const value = Number(random());
   if (!Number.isFinite(value)) {
     return 0;
   }
   return Math.min(Math.max(value, 0), 0.999999999);
+}
+
+function safeNow(now) {
+  if (typeof now !== "function") {
+    return Date.now();
+  }
+  const value = Number(now());
+  return Number.isFinite(value) ? value : Date.now();
 }
 
 function naturalLifeEnabled(preferences) {
