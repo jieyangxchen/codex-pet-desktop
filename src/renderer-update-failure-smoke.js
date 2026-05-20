@@ -68,7 +68,7 @@ async function installerDownloadFailureScenario() {
       }),
       downloadAndInstallAppUpdate: async (url, fileName) => {
         downloadCalls.push({ url, fileName });
-        throw new Error("HTTP 503");
+        throw "HTTP 503";
       },
       moveBy: async () => {},
       setIgnoreMouseEvents: async () => {},

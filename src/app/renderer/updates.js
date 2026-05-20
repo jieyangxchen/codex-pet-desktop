@@ -37,6 +37,23 @@ function setProgress(progressEl, { visible = false, received = 0, total = 0 } = 
   progressEl.setAttribute?.("aria-valuetext", received > 0 ? `已下载 ${formatBytes(received)}` : "正在下载");
 }
 
+function errorMessage(error) {
+  if (error?.message) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error === undefined || error === null) {
+    return "未知错误";
+  }
+  try {
+    return JSON.stringify(error);
+  } catch (_) {
+    return String(error);
+  }
+}
+
 function assetScore(asset, platform = "") {
   const name = String(asset?.name || "").toLowerCase();
   if (!asset?.browser_download_url || !name) {
@@ -88,7 +105,7 @@ export function createUpdateController({ dom, petDesktop, setUpdateStatus, state
       try {
         release = await fetchLatestRelease();
       } catch (error) {
-        setUpdateStatus(`检查主程序版本失败：${error.message}`);
+        setUpdateStatus(`检查主程序版本失败：${errorMessage(error)}`);
         return;
       }
       const { latest, latestTag } = release;
@@ -113,7 +130,7 @@ export function createUpdateController({ dom, petDesktop, setUpdateStatus, state
         try {
           await petDesktop.downloadAndInstallAppUpdate(asset.browser_download_url, asset.name);
         } catch (error) {
-          setUpdateStatus(`下载或启动主程序安装包失败：${error.message}`);
+          setUpdateStatus(`下载或启动主程序安装包失败：${errorMessage(error)}。可以点击“打开下载页”手动下载。`);
           return;
         }
         setUpdateStatus("已启动安装器，请按提示完成安装。");
@@ -121,7 +138,7 @@ export function createUpdateController({ dom, petDesktop, setUpdateStatus, state
       }
       setUpdateStatus(`主程序已是最新版本 v${cleanVersion(state.appInfo.version)}。`);
     } catch (error) {
-      setUpdateStatus(`检查主程序版本失败：${error.message}`);
+      setUpdateStatus(`检查主程序版本失败：${errorMessage(error)}`);
     } finally {
       setProgress(dom.appUpdateProgressEl, { visible: false });
       dom.checkUpdateButton.disabled = false;
@@ -145,7 +162,7 @@ export function createUpdateController({ dom, petDesktop, setUpdateStatus, state
       const remotePetpacks = await response.json();
       setUpdateStatus(summarizePetpackUpdates(state.pets, remotePetpacks, state.appInfo.version).message);
     } catch (error) {
-      setUpdateStatus(`检查宠物资源更新失败：${error.message}`);
+      setUpdateStatus(`检查宠物资源更新失败：${errorMessage(error)}`);
     } finally {
       dom.checkPetpackUpdatesButton.disabled = false;
     }
@@ -162,7 +179,7 @@ export function createUpdateController({ dom, petDesktop, setUpdateStatus, state
       petDesktop
         ?.openDownloads?.()
         .then(() => setUpdateStatus("已打开下载页。"))
-        .catch((error) => setUpdateStatus(`打开下载页失败：${error.message}`));
+        .catch((error) => setUpdateStatus(`打开下载页失败：${errorMessage(error)}`));
     });
   }
 
