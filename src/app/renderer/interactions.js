@@ -14,6 +14,7 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
   let edgePaused = false;
   let preferredNextDirection = 0;
   let mousePassthrough = null;
+  let panelVisibilityRevision = 0;
   const lifeEngine = createLifeEngine({
     behavior: state.activePet?.behavior,
     preferences: state.preferences
@@ -99,6 +100,12 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
 
   function panelOpen() {
     return dom.panelEl.classList.contains("hidden") === false;
+  }
+
+  function afterNextPaint(callback) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(callback);
+    });
   }
 
   function isWindowsRuntime() {
@@ -216,14 +223,50 @@ export function createInteractions({ animation, dom, onLayoutChange = () => {}, 
     requestAnimationFrame(wanderLoop);
   }
 
+  function finalizePanelClosed() {
+    dom.panelEl.classList.add("hidden");
+    dom.panelBackdropEl.classList.add("hidden");
+    dom.emptyStateEl.classList.toggle("hidden", hasActivePet());
+    document.documentElement.classList.remove("panel-open");
+    document.documentElement.classList.remove("panel-with-pet");
+    document.documentElement.classList.remove("panel-closing");
+  }
+
   function setPanelVisible(show) {
-    dom.panelEl.classList.toggle("hidden", !show);
-    dom.panelBackdropEl.classList.toggle("hidden", !show);
-    dom.emptyStateEl.classList.toggle("hidden", show || hasActivePet());
-    document.documentElement.classList.toggle("panel-open", show);
-    document.documentElement.classList.toggle("panel-with-pet", show && hasActivePet());
+    const revision = ++panelVisibilityRevision;
+    if (show) {
+      dom.panelEl.classList.remove("hidden");
+      dom.panelBackdropEl.classList.remove("hidden");
+      dom.emptyStateEl.classList.toggle("hidden", true);
+      document.documentElement.classList.add("panel-open");
+      document.documentElement.classList.toggle("panel-with-pet", hasActivePet());
+      document.documentElement.classList.remove("panel-closing");
+      setMousePassthrough(false);
+      onLayoutChange({ centerIfEmpty: false }).catch?.(() => {});
+      return;
+    }
+
     setMousePassthrough(false);
-    onLayoutChange({ centerIfEmpty: !show && !hasActivePet() }).catch?.(() => {});
+    if (panelOpen() && hasActivePet()) {
+      dom.panelBackdropEl.classList.add("hidden");
+      document.documentElement.classList.add("panel-closing");
+      afterNextPaint(() => {
+        if (revision !== panelVisibilityRevision) {
+          return;
+        }
+        onLayoutChange({ panelVisibleOverride: false })
+          .then(() => {
+            if (revision === panelVisibilityRevision) {
+              finalizePanelClosed();
+            }
+          })
+          .catch(() => {});
+      });
+      return;
+    }
+
+    finalizePanelClosed();
+    onLayoutChange({ centerIfEmpty: !hasActivePet() }).catch?.(() => {});
   }
 
   function togglePanel(show = dom.panelEl.classList.contains("hidden")) {

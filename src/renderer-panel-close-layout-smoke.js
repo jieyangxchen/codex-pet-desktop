@@ -20,6 +20,23 @@ function openControlPanel(documentObject) {
   });
 }
 
+async function runPanelCloseFrame(animationFrames, startIndex, flush) {
+  const callbacks = animationFrames.splice(startIndex);
+  if (!callbacks.length) {
+    console.error(JSON.stringify({ ok: false, reason: "panel close did not wait for a paint frame" }, null, 2));
+    process.exit(1);
+  }
+  for (const callback of callbacks) {
+    callback(0);
+  }
+  await flush();
+}
+
+async function finishPanelClose(animationFrames, closeFrameStart, flush) {
+  await runPanelCloseFrame(animationFrames, closeFrameStart, flush);
+  await runPanelCloseFrame(animationFrames, closeFrameStart, flush);
+}
+
 async function main() {
   const html = fs.readFileSync(path.join(__dirname, "app", "renderer.html"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "app", "renderer.css"), "utf8");
@@ -42,7 +59,7 @@ async function main() {
     spritesheetPath: "/pets/tigris-whippet/spritesheet.webp"
   };
 
-  const { documentObject, elements, flush, windowObject } = await loadRenderer({
+  const { animationFrames, documentObject, elements, flush, windowObject } = await loadRenderer({
     petDesktop: {
       listPets: async () => ({ pets: [pet], errors: [] }),
       getAppInfo: async () => ({ version: "0.2.13", latestReleaseApi: "", petpackIndexUrl: "" }),
@@ -99,8 +116,33 @@ async function main() {
     process.exit(1);
   }
 
+  const closeFrameStart = animationFrames.length;
+  const resizeCountBeforeClose = resizeCalls.length;
   elements.get("#closePanelButton").click();
   await flush();
+  if (
+    resizeCalls.length !== resizeCountBeforeClose ||
+    !documentObject.documentElement.classList.contains("panel-closing") ||
+    !documentObject.documentElement.classList.contains("panel-with-pet") ||
+    elements.get("#panel").classList.contains("hidden")
+  ) {
+    console.error(
+      JSON.stringify(
+        {
+          ok: false,
+          reason: "closing panel should hide the menu before resizing while keeping pet layout stable",
+          resizeCalls,
+          panelClosing: documentObject.documentElement.classList.contains("panel-closing"),
+          panelWithPet: documentObject.documentElement.classList.contains("panel-with-pet"),
+          panelHidden: elements.get("#panel").classList.contains("hidden")
+        },
+        null,
+        2
+      )
+    );
+    process.exit(1);
+  }
+  await finishPanelClose(animationFrames, closeFrameStart, flush);
   const closedWindow = resizeCalls.at(-1);
   if (!closedWindow?.anchor || closedWindow.anchor.next.x >= closedWindow.anchor.current.x) {
     console.error(JSON.stringify({ ok: false, reason: "closing panel should preserve pet anchor", resizeCalls }, null, 2));
@@ -110,29 +152,37 @@ async function main() {
 
   openControlPanel(documentObject);
   await flush();
+  const contextCloseFrameStart = animationFrames.length;
   documentObject.dispatch("contextmenu", {
     target: elements.get("#panel"),
     preventDefault() {}
   });
   await flush();
+  await finishPanelClose(animationFrames, contextCloseFrameStart, flush);
   assertPanelHidden(elements, "right-click inside visible panel did not hide panel");
 
   openControlPanel(documentObject);
   await flush();
+  const backdropCloseFrameStart = animationFrames.length;
   documentObject.dispatch("pointerdown", { target: elements.get("#panelBackdrop") });
   await flush();
+  await finishPanelClose(animationFrames, backdropCloseFrameStart, flush);
   assertPanelHidden(elements, "clicking panel backdrop did not hide panel");
 
   openControlPanel(documentObject);
   await flush();
+  const escapeCloseFrameStart = animationFrames.length;
   windowObject.dispatch("keydown", { key: "Escape" });
   await flush();
+  await finishPanelClose(animationFrames, escapeCloseFrameStart, flush);
   assertPanelHidden(elements, "Escape did not hide panel");
 
   openControlPanel(documentObject);
   await flush();
+  const blurCloseFrameStart = animationFrames.length;
   windowObject.dispatch("blur");
   await flush();
+  await finishPanelClose(animationFrames, blurCloseFrameStart, flush);
   assertPanelHidden(elements, "clicking desktop outside the active pet panel did not hide panel");
 
   console.log(JSON.stringify({ ok: true, resizeCalls }, null, 2));

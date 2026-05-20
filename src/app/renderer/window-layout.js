@@ -76,17 +76,17 @@ export function createWindowLayout({ dom, petDesktop, state }) {
     };
   }
 
-  async function syncWindowLayout({ centerIfEmpty = false } = {}) {
+  async function syncWindowLayout({ centerIfEmpty = false, panelVisibleOverride } = {}) {
     if (!petDesktop?.resizeWindow) {
       return;
     }
+    const visiblePanel = typeof panelVisibleOverride === "boolean" ? panelVisibleOverride : panelVisible();
     const size = desiredWindowSize({
       scale: Number(dom.scaleRange.value) || state.preferences.scale || 0.6,
       hasPet: hasPet(),
-      panelVisible: panelVisible()
+      panelVisible: visiblePanel
     });
     const hasActivePet = hasPet();
-    const visiblePanel = panelVisible();
     const nextPetAnchor = petAnchor(size, visiblePanel);
     const signature = `${size.width}x${size.height}:${hasActivePet ? "pet" : "empty"}:${visiblePanel ? "panel" : "plain"}`;
     if (signature === lastSignature) {

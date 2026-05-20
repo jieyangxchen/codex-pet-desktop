@@ -119,6 +119,11 @@ html.panel-with-pet .panel {
   transform: none;
 }
 
+html.panel-closing .panel {
+  opacity: 0;
+  pointer-events: none;
+}
+
 html.panel-with-pet #pet {
   flex: 0 0 var(--cell-width);
   order: 2;
