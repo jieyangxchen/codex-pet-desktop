@@ -5394,7 +5394,7 @@ dependencies = [
 
 [[package]]
 name = "yongsheng-plan"
-version = "0.2.23"
+version = "0.2.24"
 dependencies = [
  "base64 0.22.1",
  "image",

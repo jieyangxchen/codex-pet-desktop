@@ -27,6 +27,7 @@ if (!releaseSource.includes("steps.cargo-cache-key.outputs.fingerprint")) {
 
 if (cargoDependencyFingerprint) {
   const base = cargoDependencyFingerprint(lockSource);
+  const lineEndingsChanged = cargoDependencyFingerprint(lockSource.replace(/\n/g, "\r\n"));
   const appVersionChanged = cargoDependencyFingerprint(
     lockSource.replace(/(name = "yongsheng-plan"\nversion = ")[^"]+(")/, "$19.9.9$2")
   );
@@ -34,6 +35,9 @@ if (cargoDependencyFingerprint) {
     lockSource.replace(/(name = "reqwest"\nversion = ")[^"]+(")/, "$10.0.0$2")
   );
 
+  if (base !== lineEndingsChanged) {
+    failures.push("Cargo dependency fingerprint must ignore lockfile line ending differences.");
+  }
   if (base !== appVersionChanged) {
     failures.push("Cargo dependency fingerprint must ignore the local app package version.");
   }
