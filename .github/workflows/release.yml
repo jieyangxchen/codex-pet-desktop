@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -54,6 +56,7 @@ jobs:
         run: npm ci
 
       - name: Check release tag version
+        if: startsWith(github.ref, 'refs/tags/v')
         run: node scripts/check-release-tag.js
 
       - name: Run renderer, resource, page, and workflow smoke tests
@@ -70,6 +73,7 @@ jobs:
 
   build-windows:
     needs: quality-gate
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
 
     steps:
@@ -118,6 +122,7 @@ jobs:
 
   build-macos:
     needs: quality-gate
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-latest
 
     env:
@@ -170,7 +175,7 @@ jobs:
   publish:
     needs: [build-windows, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - uses: actions/download-artifact@v8

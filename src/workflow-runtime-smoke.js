@@ -47,6 +47,9 @@ const failures = workflowPaths.flatMap((workflowPath) => {
 
 const releaseSource = fs.readFileSync(path.join(root, ".github/workflows/release.yml"), "utf8");
 const pagesSource = fs.readFileSync(path.join(root, ".github/workflows/pages.yml"), "utf8");
+if (!/push:[\s\S]*branches:[\s\S]*-\s+main/.test(releaseSource)) {
+  failures.push("release workflow must run quality/cache warmup on main pushes.");
+}
 for (const required of [
   "quality-gate:",
   "Install Linux Tauri dependencies",
@@ -68,6 +71,9 @@ if (releaseSource.indexOf("Install Linux Tauri dependencies") > releaseSource.in
 if (releaseSource.indexOf("node scripts/check-release-tag.js") > releaseSource.indexOf("npm run smoke")) {
   failures.push("release workflow must check release tag before running smoke tests");
 }
+if (!/name:\s+Check release tag version[\s\S]*if:\s+startsWith\(github\.ref, 'refs\/tags\/v'\)/.test(releaseSource)) {
+  failures.push("release workflow must skip release tag validation on main warmup runs.");
+}
 if (releaseSource.indexOf("Run Rust format check") > releaseSource.indexOf("Run Rust tests")) {
   failures.push("release workflow must run Rust format check before Rust tests");
 }
@@ -83,8 +89,14 @@ for (const duplicate of ["node scripts/build-petpacks.js", "node src/download-pa
 if (!/build-windows:[\s\S]*needs:\s+quality-gate/.test(releaseSource)) {
   failures.push("build-windows must depend on quality-gate");
 }
+if (!/build-windows:[\s\S]*if:\s+startsWith\(github\.ref, 'refs\/tags\/v'\)/.test(releaseSource)) {
+  failures.push("build-windows must only run for release tag pushes.");
+}
 if (!/build-macos:[\s\S]*needs:\s+quality-gate/.test(releaseSource)) {
   failures.push("build-macos must depend on quality-gate");
+}
+if (!/build-macos:[\s\S]*if:\s+startsWith\(github\.ref, 'refs\/tags\/v'\)/.test(releaseSource)) {
+  failures.push("build-macos must only run for release tag pushes.");
 }
 
 for (const required of ["node src/visual-qa-page-smoke.js", "node src/download-page-smoke.js"]) {
